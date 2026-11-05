@@ -167,6 +167,11 @@ přepíše pro jiný hosting.
 Ukládá se jen text hlášení, místo na mapě a otisk (hash) IP adresy kvůli limitu 3 hlášení za hodinu, ne IP samotná.
 Bez `"hlaseni": true` se tlačítko nezobrazí a web zůstane čistě statický.
 
+**Před ostrým provozem nastavte ještě `SALT`:** `npx wrangler secret put SALT` (libovolný dlouhý náhodný řetězec).
+Bez něj se k otisku IP přidává veřejně známá výchozí „sůl“ z kódu a z otisku pak jde IP adresa zpětně dopočítat,
+kdyby databáze unikla. Před spamem chrání jen limit 3 hlášení za hodinu na IP adresu (`worker.js` umí i Cloudflare
+Turnstile přes `TURNSTILE_SECRET`, ale formulář v mapě zatím token neposílá, takže ho nezapínejte).
+
 ## Známé pasti
 
 - **Chyby v OpenStreetMap** se do mapy propíšou: kostel na špatném místě, potok pod domy, rybník jako asfalt.
