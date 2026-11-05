@@ -7,7 +7,8 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
 ## Postup pro nové město
 
 1. **Prostředí:** když chybí `.venv` nebo `node_modules`, spusť `./setup.sh`. Python vždy z `.venv`. Na Windows je to
-   `.venv/Scripts/python` a skripty se pouštějí v Git Bash (`sh ./setup.sh`, `sh ./postav.sh`).
+   `.venv/Scripts/python` a skripty se pouštějí v Git Bash (`sh ./setup.sh`, `sh ./postav.sh`). Python pouštěj
+   s `PYTHONUTF8=1`, jinak na Windows píše výpisy i soubory v cp1250 (padá na `²`, rozbije češtinu v JSON pro web).
 2. **Založení:** `.venv/bin/python novy_mesto.py "Název"` (víceslovné nebo nejednoznačné názvy: `--dotaz "Název, okres X"`).
    Vypíše počet čtverců 2,3 × 2,3 km. Řekni uživateli, kolik to je a jak dlouho to potrvá (orientačně: stažení
    10–30 min, render 5–10 min na čtverec na Macu s Apple Silicon). U velkého města nabídni nejdřív centrum:

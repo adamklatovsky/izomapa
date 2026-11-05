@@ -115,7 +115,8 @@ Kód je pod licencí **AGPL-3.0** (soubor `LICENSE`). Kdo ho upraví a pustí ja
 ## Co potřebujete
 
 - Mac s Apple Silicon (M1 a novější), nebo PC s grafickou kartou. Bez GPU (v cloudu) to jde taky, ale řádově pomaleji.
-  Na Windows skripty spouštějte v Git Bash (`sh ./setup.sh`, `sh ./postav.sh`).
+  Na Windows skripty spouštějte v Git Bash (`sh ./setup.sh`, `sh ./postav.sh`) a před ručním spuštěním
+  Pythonu (`novy_mesto.py` apod.) nastavte `export PYTHONUTF8=1`.
 - Python 3.9+, Node 18+.
 - Disk: malé město jednotky GB, krajské město desítky GB.
 - Hosting pro statický web. Výsledek je obyčejná složka `site/` s tisíci obrázků, nahrajete ji kamkoli, kde zvládnou
