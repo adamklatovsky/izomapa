@@ -31,6 +31,8 @@ fill = {
     'TITULEK': E(M['titulek']), 'POPIS': E(M['popis']), 'MESTO': E(M['nazev']), 'H1_A': E(M['h1'][0]), 'H1_B': E(M['h1'][1]),
     'PODTITUL': E(M['podtitul']),
     'HLASENI': 'true' if M.get('hlaseni') else 'false',
+    'VITR': 'true' if M.get('vitr') else 'false',
+    'VITR_ZDROJ': ', vítr © <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)' if M.get('vitr') else '',
     'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
                  if mhd.get('gtfs') and mhd.get('zdroj') else '',
 }
