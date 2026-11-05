@@ -268,17 +268,21 @@ ZSAD = [g for g in map(_zpoly, ZAB['sad']) if g.intersects(_zb)]
 for g in ZTTP: fill(g, C['meadow'])
 CROPS = ['wheat'] * 4 + ['rape'] * 2 + ['maize'] * 2 + ['soil'] * 2
 for g in ZORNA:
+    # plodina a směr řádků podle celého pole (ne podle kusu v tomto čtverci), aby pole na švu čtverců navazovalo
+    o = g.minimum_rotated_rectangle; oc = list(o.exterior.coords)[:4]
+    e1 = np.subtract(oc[1], oc[0]); e2 = np.subtract(oc[2], oc[1])
+    if np.linalg.norm(e1) < np.linalg.norm(e2): e1, e2 = e2, e1
+    u = e1 / np.linalg.norm(e1)
+    if u[0] < 0 or (u[0] == 0 and u[1] < 0): u = -u              # stejná orientace ve všech čtvercích
+    v = np.array([-u[1], u[0]]); c0 = np.array(g.centroid.coords[0])
+    cr = CROPS[int(h01(wkey(c0[0] + CX, c0[1] + CY) + 'pole') * len(CROPS))]
     for p in polys(g.intersection(DRAWBOX)):
         if p.area < 400: continue
-        cr = CROPS[int(h01(wkey(p.centroid.x + CX, p.centroid.y + CY) + 'pole') * len(CROPS))]
         fill(p, C[cr])
-        o = p.minimum_rotated_rectangle; oc = list(o.exterior.coords)[:4]
-        e1 = np.subtract(oc[1], oc[0]); e2 = np.subtract(oc[2], oc[1])
-        if np.linalg.norm(e1) < np.linalg.norm(e2): e1, e2 = e2, e1
-        u = e1 / np.linalg.norm(e1); v = np.array([-u[1], u[0]]); c0 = np.array(p.centroid.coords[0]); R_ = math.hypot(*np.subtract(p.bounds[2:], p.bounds[:2]))
-        k = -R_
-        while k < R_:                                # řádky po 2 m
-            l = LineString([tuple(c0 + v * k - u * R_), tuple(c0 + v * k + u * R_)]).intersection(p)
+        pc = np.array(p.exterior.coords) - c0; pu_, pv_ = pc @ u, pc @ v
+        k = math.floor(pv_.min() / 2.0) * 2.0
+        while k < pv_.max():                         # řádky po 2 m na mřížce celého pole
+            l = LineString([tuple(c0 + v * k + u * (pu_.min() - 1)), tuple(c0 + v * k + u * (pu_.max() + 1))]).intersection(p)
             if not l.is_empty: line(l, C[cr + '2'], 0.6)
             k += 2.0
 
