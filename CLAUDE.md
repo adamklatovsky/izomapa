@@ -66,6 +66,9 @@ Ukazuj uživateli výřezy před a po.
 - **Hlášení nepřesností** (volitelné): `"hlaseni": true` v `mesto.json` zobrazí v kartě tlačítko a `build_html.py`
   zkopíruje `hlaseni/admin.html` do `site/`. Potřebuje server z `hlaseni/` (Cloudflare Worker + D1, návod v README).
   Nabídni to, až bude mapa veřejně; nasazení a heslo dělá uživatel sám. Jiný hosting = přepsat `hlaseni/worker.js`.
+  Při nasazení uživateli řekni, ať nastaví i tajný `SALT` (`npx wrangler secret put SALT`, dlouhý náhodný řetězec):
+  bez něj se otisk IP počítá s veřejnou výchozí solí a z uniklé databáze jde IP dopočítat. `TURNSTILE_SECRET` nezapínej,
+  formulář v mapě neposílá token a všechna hlášení by pak selhala.
 
 ## Pravidla
 
