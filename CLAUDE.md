@@ -56,6 +56,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   Ukázka je v `priklady/mista.json`.
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
+- **Semafory:** `.venv/bin/python nastroje/semafory.py` vyrobí `assets/semafory.json` z OSM. Bez něj auta nezastavují. Délka cyklu je odhad.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 
