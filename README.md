@@ -104,6 +104,7 @@ ale i tak se může splést, proto fakta před zveřejněním ověřte.
 | [Terrarium](https://registry.opendata.aws/terrain-tiles/) (AWS Open Data) | terén | s uvedením zdroje |
 | jízdní řády GTFS dopravce | MHD | **podmínky konkrétního dopravce si ověřte** |
 | [Open-Meteo](https://open-meteo.com/) (volitelné, `"vitr": true` a `"pocasi": true` v `mesto.json`) | skutečný vítr pro kouř z komínů, skutečné počasí v mapě | CC BY 4.0, zdarma jen pro nekomerční použití; prohlížeč návštěvníka se k službě připojuje přímo |
+| [Copernicus CAMS](https://atmosphere.copernicus.eu/) přes Open-Meteo (s `"pocasi": true`) | opar podle PM2,5 (model, ne měření ve městě) | s uvedením zdroje |
 
 Prohlížeč má zdroje dat v patičce nápovědy, nechte je tam.
 

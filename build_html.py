@@ -33,7 +33,7 @@ fill = {
     'HLASENI': 'true' if M.get('hlaseni') else 'false',
     'VITR': 'true' if M.get('vitr') else 'false',
     'POCASI': 'true' if M.get('pocasi') else 'false',
-    'VITR_ZDROJ': ', ' + ('počasí a vítr' if M.get('pocasi') and M.get('vitr') else 'počasí' if M.get('pocasi') else 'vítr') + ' © <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)' if M.get('vitr') or M.get('pocasi') else '',
+    'VITR_ZDROJ': ', ' + ('počasí a vítr' if M.get('pocasi') and M.get('vitr') else 'počasí' if M.get('pocasi') else 'vítr') + ' © <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)' + (', kvalita ovzduší z modelu <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">Copernicus CAMS</a>' if M.get('pocasi') else '') if M.get('vitr') or M.get('pocasi') else '',
     'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
                  if mhd.get('gtfs') and mhd.get('zdroj') else '',
 }
