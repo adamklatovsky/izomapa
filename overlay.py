@@ -169,9 +169,12 @@ for chunk in chunks:
 
 
 
+OBCE = [json.load(open(f'obce/{f}', encoding='utf-8')) for f in sorted(os.listdir('obce')) if f.endswith('.json')] if os.path.isdir('obce') else []
 # místa s krátkým popisem (fakta z dat + ověřené zdroje)
 # místa s krátkým příběhem: mista.json [{"nazev", "lat", "lon", "text"}, ...] (fakta z ověřených zdrojů)
-PLACES = [(m['nazev'], m['lat'], m['lon'], m['text']) for m in json.load(open('mista.json', encoding='utf-8'))] if os.path.exists('mista.json') else []
+PLACES = [(m['nazev'], m['lat'], m['lon'], m['text'], m.get('obec')) for m in json.load(open('mista.json', encoding='utf-8'))] if os.path.exists('mista.json') else []
+for o in OBCE:
+    PLACES += [(m['nazev'], m['lat'], m['lon'], m['text'], m.get('obec') or o.get('nazev')) for m in o.get('mista', [])]
 def gz(x, y):
     for gr in grounds:
         lx, ly = x - gr['cx'], y - gr['cy']
@@ -185,20 +188,23 @@ def gz(x, y):
 # co je potřeba dodat ručně (fotky): klíčové objekty z assets/dominanty.json, žluté značky v režimu „vč. rozpracovaného“
 NEEDS = []     # fotky ke všem dominantám jsou dodané (dřív žluté značky 📷)
 places = []
-for name, lat, lon, text in PLACES:
+for name, lat, lon, text, obec in PLACES:
     x, y = to_local(lon, lat)
     c = chunk_of(float(x), float(y))
     if c not in CKEY: continue
     OFF = (0.0, 0.0)
-    places.append({'name': name, 'text': text, 'lon': lon, 'lat': lat, 'k': CKEY[c], 'xy': list(px(float(x), float(y), gz(x, y))[:2])})
+    places.append({'name': name, 'text': text, 'lon': lon, 'lat': lat, 'k': CKEY[c], 'xy': list(px(float(x), float(y), gz(x, y))[:2]), **({'obec': obec} if obec else {})})
 
 cam = {'x0': info['x0'], 'y1': info['y1'], 'mpp': info['mpp'], 'X': list(map(float, CAM_X)), 'Y': list(map(float, CAM_Y)),
        'half': HALF, 'grounds': grounds}
-# vánoční strom na náměstí (zima): mesto.json vanocni_strom = [lat, lon]
-nam = None
-if MESTO.get('vanocni_strom'):
-    _x, _y = to_local(MESTO['vanocni_strom'][1], MESTO['vanocni_strom'][0]); OFF = (0.0, 0.0)
-    nam = list(px(float(_x), float(_y), gz(_x, _y))[:2])
+# vánoční strom na náměstí (zima): mesto.json vanocni_strom = [lat, lon] (příp. více stromů z obce/*.json)
+stromy = []
+for s in [MESTO.get('vanocni_strom')] + [o.get('vanocni_strom') for o in OBCE]:
+    if isinstance(s, list) and len(s) == 2 and all(isinstance(v, (int, float)) for v in s):
+        _x, _y = to_local(s[1], s[0]); OFF = (0.0, 0.0)
+        pt = list(px(float(_x), float(_y), gz(_x, _y))[:2])
+        if pt not in stromy: stromy.append(pt)
+nam = stromy[0] if len(stromy) == 1 else (stromy or None)
 cam.update({'lon0': LON0, 'lat0': LAT0, 'kx': KX, 'ky': KY})
 needs = []
 for name, lat, lon, text in NEEDS:
@@ -218,7 +224,8 @@ for st, n, g in zip(_dv.subtype, _dv.names, _dv.geometry):
     rp = gg.representative_point(); c = chunk_of(rp.x, rp.y)
     if c not in CKEY: continue
     OFF = (0.0, 0.0)
-    nm = nm.replace(MESTO['nazev'] + '-', '')
+    for naz in [MESTO['nazev']] + [o['nazev'] for o in OBCE if o.get('nazev')]:
+        nm = nm.replace(naz + '-', '')
     districts.append({'name': nm, 'xy': list(px(rp.x, rp.y, gz(rp.x, rp.y))[:2]), 'a': round(gg.area / 1e6, 2)})
 print('čtvrtí', len(districts))
 # tramvaje: graf kolejí přes všechny čtverce, linky = nejkratší cesta mezi konečnými (TRAM_LINES), tam a zpět

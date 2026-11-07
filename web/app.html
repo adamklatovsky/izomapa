@@ -444,22 +444,15 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(p.xy[0] / W, p.xy[1] / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
     }
     ready = true; applyVisibility(); applyTime(); loadMini(); tickReal();
-    const b = homeBounds(); viewer.viewport.fitBounds(b, true);
+    viewer.viewport.fitBounds(homeBounds(), true);
     // odkaz na místo: #zima-noc@50.76984,15.05836,2 (zeměpisná šířka, délka, přiblížení = šířka výřezu v km)
     const at = (location.hash.split('@')[1] || '').split(',').map(Number);
-    if (at.length >= 2 && at.every(Number.isFinite)) {
-      const [lat, lon, km] = at, x = (lon - cam.lon0) * cam.kx, y = (lat - cam.lat0) * cam.ky;
-      const [ix, iy] = toImg(x, y, gz(x, y));
-      const inMap = ix / W >= b.x && ix / W <= b.x + b.width && iy / W >= b.y && iy / W <= b.y + b.height;   // mimo všechny čtverce mapy by ukázal prázdno
-      if (inMap) {
-        viewer.viewport.panTo(new OpenSeadragon.Point(ix / W, iy / W), true);
-        viewer.viewport.zoomTo(W * cam.mpp / (Math.min(Math.max(km > 0 ? km : 1, 0.05), W * cam.mpp / 1000) * 1000), null, true);
-      }
-      if (inMap && at[3] === 1) {                                  // ...,1 = značka přesně na místě (odkaz z administrace hlášení)
-        const el = document.createElement('div'); el.className = 'here-pin';
-        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(ix / W, iy / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
-        onChunk.push(() => { const bb = hit(ix, iy); if (bb) state.sel = bb; });   // budovu na místě zvýraznit, jakmile se načtou data
-      }
+    const hasAt = at.length >= 2 && at.every(Number.isFinite);
+    const pos = goView(hasAt ? at : HOME_VIEW, true);
+    if (pos && hasAt && at[3] === 1) {                           // ...,1 = značka přesně na místě (odkaz z administrace hlášení)
+      const [ix, iy] = pos, el = document.createElement('div'); el.className = 'here-pin';
+      viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(ix / W, iy / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
+      onChunk.push(() => { const bb = hit(ix, iy); if (bb) state.sel = bb; });   // budovu na místě zvýraznit, jakmile se načtou data
     }
     let hashT = null;
     viewer.addHandler('animation-finish', () => { clearTimeout(hashT); hashT = setTimeout(() => {
@@ -470,12 +463,24 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     }, 400); });
     loadVisible();
   }
+  const HOME_VIEW = {{POHLED}}, HOME_ALL = {{DOMU_CELEK}}, OBEC = {{OBEC}};
   function homeBounds() {
     const vis = LAYERS.filter((l) => shown(l.key));
     const x0 = Math.min(...vis.map((l) => l.x)), y0 = Math.min(...vis.map((l) => l.y));
     const x1 = Math.max(...vis.map((l) => l.x + l.w)), y1 = Math.max(...vis.map((l) => l.y + (l.day ? l.day.getBounds().height : 0.56)));
     return new OpenSeadragon.Rect(x0, y0, x1 - x0, y1 - y0);
   }
+  function goView(v, imm = false) {
+    const b = homeBounds();
+    if (!v || v.length < 2 || !v.every(Number.isFinite)) { viewer.viewport.fitBounds(b, imm); return null; }
+    const [lat, lon, km] = v, x = (lon - cam.lon0) * cam.kx, y = (lat - cam.lat0) * cam.ky;
+    const [ix, iy] = toImg(x, y, gz(x, y));
+    if (ix / W < b.x || ix / W > b.x + b.width || iy / W < b.y || iy / W > b.y + b.height) { viewer.viewport.fitBounds(b, imm); return null; }
+    viewer.viewport.panTo(new OpenSeadragon.Point(ix / W, iy / W), imm);
+    viewer.viewport.zoomTo(W * cam.mpp / (Math.min(Math.max(km > 0 ? km : 1, 0.05), W * cam.mpp / 1000) * 1000), null, imm);
+    return [ix, iy];
+  }
+  const goHome = (imm = false) => goView(HOME_VIEW && !HOME_ALL ? HOME_VIEW : null, imm);
   viewer.addOnceHandler('open', () => {});
   initLayers();
   const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -653,7 +658,8 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     return best;
   }
   const placeByName = Object.fromEntries(OV.places.map((p) => [p.name, p]));
-  if (!OV.places.length) $('placesBox').hidden = true;      // bez mista.json
+  const myPlaces = OV.places.filter((p) => !OBEC || !p.obec || p.obec === OBEC);
+  if (!myPlaces.length) $('placesBox').hidden = true;      // bez mista.json
 
   // ---------- karta ----------
   const ROOF = { flat: 'plochá', gabled: 'sedlová', hipped: 'valbová', pyramidal: 'stanová' };
@@ -760,7 +766,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     if (isMobile()) setMenu(false);
   }
   const placesUl = $('places');
-  const placesAbc = [...OV.places].sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+  const placesAbc = [...myPlaces].sort((a, b) => a.name.localeCompare(b.name, 'cs'));
   var renderPlaces = () => {
     placesUl.replaceChildren();
     for (const p of placesAbc) {
@@ -813,7 +819,8 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   const zbtn = (id, f) => $(id).addEventListener('click', f);
   zbtn('zin', () => viewer.viewport.zoomBy(1.6));
   zbtn('zout', () => viewer.viewport.zoomBy(1 / 1.6));
-  zbtn('home', () => viewer.viewport.fitBounds(homeBounds()));
+  if (HOME_VIEW && !HOME_ALL) $('home').title = 'Výchozí pohled';
+  zbtn('home', () => goHome());
   $('help').addEventListener('click', (e) => { e.stopPropagation(); $('helpDlg').showModal(); });
   $('helpClose').addEventListener('click', () => $('helpDlg').close());
   $('helpDlg').addEventListener('click', (e) => { if (e.target === $('helpDlg')) $('helpDlg').close(); });
@@ -1361,6 +1368,15 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     g.fillStyle = '#f6d34a'; g.fillRect(13, 1, 4, 4); g.fillRect(14, 0, 2, 6); g.fillRect(12, 2, 6, 2);
     return { c, lights };
   })();
+  const xmasPts = (() => {
+    const pts = Array.isArray(OV.xmas?.[0]) ? [...OV.xmas] : OV.xmas ? [OV.xmas] : [];
+    const s = {{STROM}};
+    if (s && s.length === 2) {
+      const x = (s[1] - cam.lon0) * cam.kx, y = (s[0] - cam.lat0) * cam.ky, p = toImg(x, y, gz(x, y));
+      if (!pts.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 5)) pts.push(p);
+    }
+    return pts;
+  })();
   // vodní třpytky: body na potocích a uvnitř rybníků
   const sparkles = [];
   onChunk.push((wk, d) => {
@@ -1514,8 +1530,8 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       }
     }
     // vánoční strom
-    if (snowy && OV.xmas && vis(OV.xmas[0], OV.xmas[1], 100) && sx > 0.15) {
-      const k = Math.max(1, Math.round(sx * 1.2)), X0 = Math.round(ox + (OV.xmas[0] + 30) * sx - 15 * k), Y0 = Math.round(oy + (OV.xmas[1] - 4) * sx - 48 * k);
+    if (snowy && sx > 0.15) for (const pt of xmasPts) if (vis(pt[0], pt[1], 100)) {
+      const k = Math.max(1, Math.round(sx * 1.2)), X0 = Math.round(ox + (pt[0] + 30) * sx - 15 * k), Y0 = Math.round(oy + (pt[1] - 4) * sx - 48 * k);
       ctx.drawImage(xmas.c, X0, Y0, 30 * k, 48 * k);
       const on = night > 0.3 ? 1 : 0.55;
       xmas.lights.forEach(([lx, ly], i) => {
