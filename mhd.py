@@ -50,7 +50,10 @@ TI = {t['trip_id'] for t in trips}
 st = {}
 for r in T('stop_times'):
     if r['trip_id'] not in TI: continue
-    st.setdefault(r['trip_id'], []).append((int(r['stop_sequence']), sec(r['arrival_time']), sec(r['departure_time']), float(r.get('shape_dist_traveled') or 0), r['stop_id']))
+    ta = r.get('arrival_time') or r.get('departure_time')
+    td = r.get('departure_time') or ta
+    if not ta: continue
+    st.setdefault(r['trip_id'], []).append((int(r['stop_sequence']), sec(ta), sec(td), float(r.get('shape_dist_traveled') or 0), r['stop_id']))
 for v in st.values(): v.sort()
 if 'shapes.txt' not in zf.namelist():                      # GTFS bez tvarů tras (např. IDS JMK): trasa mezi zastávkami po silnicích z mapy
     import road_route
