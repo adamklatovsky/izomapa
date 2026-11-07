@@ -63,6 +63,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Směr hřebene:** `.venv/bin/python nastroje/hrebeny.py` (po `dmp_fetch.py`) zapíše do `assets/hrebeny.json` jen jisté případy, kde laser ukazuje hřeben podél kratší strany.
 - **Hustota aut (volitelné):** `.venv/bin/python nastroje/scitani.py` a v `mesto.json` `"doprava": {"kraj": "Název kraje"}`. Volitelně `"useky": {"číslo silnice": ["úsek sčítání", …]}` vybere přesné úseky, jinak se bere medián silnice v kraji. Počet aut na mapě je ilustrace poměrů, ne skutečný počet. Na celé mapě se ukáže nejvýš 1 000 aut, na telefonu, při pomalém připojení a v úsporném režimu 300.
 - **Typy budov (jen Česko):** `.venv/bin/python nastroje/ruian.py` vyrobí `assets/ruian_budovy.json` (způsob využití a podlaží z veřejné služby RÚIAN). `prep.py` jím doplní jen prázdný nebo obecný typ a podlaží tam, kde není laser. Třída `apartments` znamená plochou střechu, proto ji dostane jen budova, u které plochou střechu potvrdí laser. Po změně je potřeba nový render.
+- **Komíny, věže, nádrže, potrubí:** `.venv/bin/python nastroje/kominy.py` vyrobí `assets/kominy.json` a `assets/potrubi.json` z OSM (výška z tagu `height`). Komín od 100 m dostane výstražné pruhy. Vzhled jednoho komína: `assets/upresneni.json`, `"kominy": [{"lat", "lon", "wc": barva, "pr": 0}]`. Po změně je potřeba nový render dotčených čtverců.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 

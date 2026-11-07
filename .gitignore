@@ -24,3 +24,5 @@ assets/hrebeny.json
 .dev.vars
 .wrangler/
 assets/ruian_budovy.json
+assets/kominy.json
+assets/potrubi.json
