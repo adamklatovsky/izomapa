@@ -150,4 +150,23 @@ if __name__ == '__main__':
         info = json.load(open('build/tiles_autumn/info.json'))
         out['base'] = {'x0': info['x0'], 'y1': info['y1'], 'mpp': info['mpp'], 'status': CHUNKS[(0, 0)]}
         for v in variants: out[v] = build(v)
-    json.dump(out, open(path, 'w'))
+    # souběžné procesy: index se před zápisem načte znovu a změní se jen tento čtverec, zápis pod zámkem a atomicky
+    import time
+    lock = path + '.lock'
+    while True:
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL); os.close(fd); break
+        except FileExistsError:
+            if time.time() - os.path.getmtime(lock) > 60: os.remove(lock)
+            time.sleep(0.2)
+    try:
+        cur = json.load(open(path)) if os.path.exists(path) else {}
+        if chunk: cur.setdefault('chunks', {})[name] = out['chunks'][name]
+        else:
+            cur['base'] = out['base']
+            for v in variants: cur[v] = out[v]
+        for k in out:
+            if k not in cur: cur[k] = out[k]
+        json.dump(cur, open(path + '.tmp', 'w')); os.replace(path + '.tmp', path)
+    finally:
+        os.remove(lock)
