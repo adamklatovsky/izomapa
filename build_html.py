@@ -53,6 +53,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'DOMU_CELEK': 'true' if M.get('domu_celek') else 'false',
         'STROM': json.dumps(strom if isinstance(strom, list) and len(strom) == 2 else None),
         'OBEC': json.dumps(M.get('nazev') if je_obec else None, ensure_ascii=False),
+        'CENTRUM': json.dumps(M.get('centrum')),          # [lon, lat, poloměr m]: historické centrum, kam kamiony nejezdí
         'VLAK': json.dumps({'vychozi': (M.get('vlak') or {}).get('vychozi', 'regionova') if isinstance(M.get('vlak'), dict) else M.get('vlak', 'regionova'), 'linky': M['vlak'].get('linky', {}) if isinstance(M.get('vlak'), dict) else {}}),
         'DOPRAVA_ZDROJ': ', intenzity dopravy © <a href="https://www.rsd.cz/silnice-a-dalnice/scitani-dopravy" target="_blank" rel="noopener">ŘSD ČR</a> (Celostátní sčítání dopravy)' if M.get('doprava') else '',
         'RUIAN_ZDROJ': ', typy budov z RÚIAN' if os.path.exists('assets/ruian_budovy.json') else '',

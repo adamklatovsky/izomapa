@@ -249,6 +249,20 @@ for name, lat, lon, text in NEEDS:
     x, y = to_local(lon, lat); OFF = (0.0, 0.0); c = chunk_of(float(x), float(y))
     if c in CKEY: needs.append({'name': name, 'text': text, 'k': CKEY[c], 'xy': list(px(float(x), float(y), gz(x, y) + 15)[:2])})
 os.makedirs('site/overlay', exist_ok=True)
+# semafory z OSM (highway=traffic_signals): prohlížeč podle nich staví auta na červenou; [x, y] ve světě
+for chunk in chunks:
+    K = CKEY[chunk]
+    semafory = []
+    _dd = 'data' if tuple(chunk) == (0, 0) else f'data_c{chunk[0]}_{chunk[1]}'
+    if os.path.exists(f'{_dd}/infrastructure.parquet'):
+        _cx, _cy = chunk_center(chunk)
+        for r_ in pq.read_table(f'{_dd}/infrastructure.parquet', columns=['class', 'geometry']).to_pylist():
+            if r_['class'] != 'traffic_signals': continue
+            g_ = shapely.from_wkb(r_['geometry'])
+            if g_.geom_type != 'Point': continue
+            x_, y_ = (float(v) for v in to_local(g_.x, g_.y))
+            if abs(x_ - _cx) <= HALF and abs(y_ - _cy) <= HALF: semafory.append([round(x_, 1), round(y_, 1)])
+    per_chunk[K]['semafory'] = semafory
 for K, v in per_chunk.items():
     json.dump(v, open(f'site/overlay/{K}.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 # názvy čtvrtí (Overture divisions: macrohood + obce/osady), zobrazují se jen při oddálení
