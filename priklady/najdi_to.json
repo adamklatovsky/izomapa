@@ -1,0 +1,47 @@
+{
+  "enabled": true,
+  "title": "Najdeš to?",
+  "api_url": "api/najdi_to.php",
+  "difficulties": {
+    "easy": {
+      "name": "Lehká (Den)",
+      "time": 0.0,
+      "weather": "clear"
+    },
+    "medium": {
+      "name": "Střední (Déšť a šero)",
+      "time": 0.5,
+      "weather": "rain"
+    },
+    "hard": {
+      "name": "Těžká (Noc)",
+      "time": 1.0,
+      "weather": "clear"
+    }
+  },
+  "levels": [
+    {
+      "lvl": 1,
+      "text": "Najdi v centru města.",
+      "camera": [50.769, 15.058, 1.2],
+      "questions": [
+        {
+          "id": "radnice",
+          "text": "Najdeš radnici?",
+          "lat": 50.7697,
+          "lon": 15.0585,
+          "radius": 35,
+          "answer": "Historická radnice na náměstí"
+        },
+        {
+          "id": "kostel",
+          "text": "Najdeš hlavní kostel?",
+          "lat": 50.7685,
+          "lon": 15.0572,
+          "radius": 35,
+          "answer": "Kostel sv. Antonína Velikého"
+        }
+      ]
+    }
+  ]
+}

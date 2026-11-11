@@ -374,9 +374,67 @@ for a_n, b_n, n_ in TRAM_LINES:
     trams.append({'w': [[round(x, 1), round(y, 1)] for x, y, z in pts], 'p': [list(px(x, y, z)) for x, y, z in pts], 'n': n_,
                   'stops': [list(px(TSTOP[n][0], TSTOP[n][1], 0)[:2]) + [n] for n in st]})
     print('tramvaj', a_n, '–', b_n, round(sum(math.hypot(x1 - x0, y1 - y0) for (x0, y0), (x1, y1) in zip(on, on[1:]))), 'm', len(st), 'zastávek')
-json.dump({'w': W, 'h': H, 'cam': cam, 'districts': districts, 'needs': needs, 'xmas': nam, 'chunks': {CKEY[c]: CHUNKS[c] for c in chunks}, 'bus': bus_route, 'trams': trams, 'decks': decks,
-           'streets': streets, 'places': places, 'neighbors': neighbors},
-          open('site/overlay.json', 'w'), separators=(',', ':'), ensure_ascii=False)
+
+# herní režim "Najdeš to?": volitelná konfigurace z assets/najdi_to.json (příp. najdi_to.json)
+najdi_to = None
+for _p in ('assets/najdi_to.json', 'najdi_to.json'):
+    if os.path.exists(_p):
+        try:
+            with open(_p, encoding='utf-8') as f:
+                raw_game = json.load(f)
+            if raw_game.get('enabled', True) and 'levels' in raw_game:
+                najdi_to = {
+                    'title': raw_game.get('title', 'Najdeš to?'),
+                    'api_url': raw_game.get('api_url'),
+                    'leaderboard_url': raw_game.get('leaderboard_url', 'najdi_to_leaderboard.json'),
+                    'difficulties': raw_game.get('difficulties', {}),
+                    'levels': []
+                }
+                for lvl in raw_game['levels']:
+                    lvl_data = {
+                        'lvl': lvl.get('lvl', 1),
+                        'text': lvl.get('text', ''),
+                        'camera': lvl.get('camera'),
+                        'questions': []
+                    }
+                    for q in lvl.get('questions', []):
+                        q_data = {
+                            'id': q.get('id', ''),
+                            'text': q.get('text', ''),
+                            'lat': q.get('lat'),
+                            'lon': q.get('lon'),
+                            'radius': q.get('radius', 35),
+                            'answer': q.get('answer', '')
+                        }
+                        if 'lat' in q and 'lon' in q:
+                            x, y = to_local(float(q['lon']), float(q['lat']))
+                            OFF = (0.0, 0.0)
+                            q_data['xy'] = list(px(float(x), float(y), gz(x, y))[:2])
+                        if 'targets' in q:
+                            t_pts = []
+                            for tlat, tlon in q['targets']:
+                                tx, ty = to_local(float(tlon), float(tlat))
+                                OFF = (0.0, 0.0)
+                                t_pts.append({
+                                    'lat': tlat,
+                                    'lon': tlon,
+                                    'xy': list(px(float(tx), float(ty), gz(tx, ty))[:2])
+                                })
+                            q_data['targets'] = t_pts
+                        lvl_data['questions'].append(q_data)
+                    najdi_to['levels'].append(lvl_data)
+                break
+        except Exception as e:
+            print('Varování: nepodařilo se zpracovat data najdi_to:', e)
+
+overlay_payload = {'w': W, 'h': H, 'cam': cam, 'districts': districts, 'needs': needs, 'xmas': nam,
+                   'chunks': {CKEY[c]: CHUNKS[c] for c in chunks}, 'bus': bus_route, 'trams': trams, 'decks': decks,
+                   'streets': streets, 'places': places, 'neighbors': neighbors}
+if najdi_to:
+    overlay_payload['najdi_to'] = najdi_to
+json.dump(overlay_payload, open('site/overlay.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 json.dump(addr_index, open('site/search.json', 'w'), separators=(',', ':'), ensure_ascii=False)   # adresy pro hledání, načte se až při psaní
 print('čtverců', len(chunks), 'budov', sum(len(v['buildings']) for v in per_chunk.values()), 'adres', len(addr_index),
-      'ulic', len(streets), 'míst', len(places), 'sousedů', len(neighbors), 'kB', os.path.getsize('site/overlay.json') // 1000)
+      'ulic', len(streets), 'míst', len(places), 'sousedů', len(neighbors),
+      ('najdi_to úrovní ' + str(len(najdi_to['levels'])) if najdi_to else 'bez najdi_to'),
+      'kB', os.path.getsize('site/overlay.json') // 1000)

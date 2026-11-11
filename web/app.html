@@ -246,12 +246,161 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   .minimap { display: none; }
   .panel { max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
 }
+
+/* herní mód "Najdeš to?" */
+body.game-mode .pin { display: none !important; }
+.game-fold {
+  position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 28px + 52px + 6px);
+  left: calc(max(16px, env(safe-area-inset-left, 0px)) + var(--pw, 356px)); transition: left .2s ease;
+  width: 22px; height: 52px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  background: var(--panel); color: var(--muted); border: 2px solid var(--edge); border-left: 0;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, .35); font-family: var(--display); font-size: 1rem;
+}
+.folded .game-fold { left: 0; border-left: 0; }
+.game-fold:hover, .game-fold:focus-visible { color: #fff; background: var(--panel-2); }
+.game-fold.active { background: #2e3852; color: #ffca36; border-color: #f2c66d; }
+.game-panel { display: grid; gap: 12px; }
+.game-panel[hidden] { display: none !important; }
+.game-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--edge); padding-bottom: 8px; }
+.game-head h2 { margin: 0; font-family: var(--display); font-size: 1.25rem; color: #ffca36; }
+.game-head .close-game { padding: 4px 10px; font-size: .88rem; }
+.game-lvl-box { display: grid; gap: 6px; }
+.game-lvl-box label { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.game-lvl-select { width: 100%; padding: 6px 8px; background: var(--panel-2); color: var(--ink); border: 2px solid var(--edge); font-family: inherit; font-size: .95rem; }
+.game-lvl-desc { margin: 0; font-size: .92rem; color: var(--ink); line-height: 1.4; }
+.game-diff-box { display: grid; gap: 6px; }
+.game-diff-box label { font-size: .82rem; color: var(--muted); text-transform: uppercase; }
+.game-diff-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.game-diff-btn { padding: 6px 4px; font-size: .8rem; text-align: center; }
+.game-diff-btn.active { background: #ffca36; color: #1b2333; border-color: #d49f10; font-weight: bold; }
+.game-season-box { display: grid; gap: 6px; }
+.game-season-box label { font-size: .82rem; color: var(--muted); text-transform: uppercase; }
+.game-season-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.game-season-group button { padding: 5px 2px; font-size: .8rem; }
+.game-season-group button.active { background: var(--grass); color: #1b2333; font-weight: bold; border-color: #659a3e; }
+.game-start-btn { width: 100%; padding: 10px; font-size: 1.05rem; font-family: var(--display); background: #ffca36; color: #1b2333; border-color: #d49f10; font-weight: bold; cursor: pointer; }
+.game-start-btn:hover { background: #ffe066; }
+.game-status-bar { display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); border: 2px solid var(--edge); padding: 8px 12px; }
+.game-timer { font-family: var(--display); font-size: 1.15rem; color: #ffca36; }
+.game-progress-badge { font-weight: bold; font-size: .9rem; color: var(--ink); }
+.game-q-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.game-q-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 2px solid var(--edge); background: var(--panel-2); font-size: .9rem; line-height: 1.35; }
+.game-q-item.q-done { border-color: #4a7536; background: rgba(74, 117, 54, .25); color: #c8e6b8; }
+.game-q-item.q-done .q-ico { color: #8cc063; font-weight: bold; font-size: 1.1rem; }
+.game-q-item.q-active { border-color: #f2c66d; background: rgba(242, 198, 109, .15); font-weight: bold; color: #fff; box-shadow: 0 0 8px rgba(242, 198, 109, .3); }
+.game-q-item.q-active .q-ico { font-size: 1.1rem; }
+.game-q-item.q-locked { opacity: .55; color: var(--muted); }
+.game-hint { font-size: .84rem; color: var(--muted); margin: 4px 0 0; line-height: 1.45; background: rgba(0,0,0,.15); padding: 8px 10px; border-left: 3px solid var(--edge); }
+.game-cancel-btn { width: 100%; padding: 6px; font-size: .85rem; color: var(--muted); }
+.game-link-btn { background: none; border: 0; color: #ffca36; text-decoration: underline; cursor: pointer; padding: 4px 6px; font-size: .88rem; font-family: inherit; }
+.game-link-btn:hover, .game-link-btn:focus-visible { color: #fff; }
+.game-modal-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.game-modal-btns .px-btn { flex: 1; min-width: 130px; text-align: center; }
+.game-share-callout { background: rgba(24, 119, 242, .15); border: 1px solid #1877f2; padding: 10px; margin: 12px 0; border-radius: 2px; font-size: .88rem; }
+/* sběratelský certifikát pro printscreen */
+.game-cert-card {
+  margin: 14px 0 16px;
+  background: linear-gradient(145deg, #161e30, #222d42);
+  border: 3px double #f2c66d;
+  box-shadow: 0 0 18px rgba(242, 198, 109, .25), inset 0 0 14px rgba(0, 0, 0, .45);
+  padding: 6px;
+  text-align: center;
+  color: var(--ink);
+}
+.cert-inner {
+  border: 1px dashed rgba(242, 198, 109, .45);
+  padding: 16px 14px 14px;
+  background: rgba(10, 14, 24, .35);
+}
+.cert-badge {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: .88rem;
+  letter-spacing: 1.5px;
+  color: #ffca36;
+  background: rgba(255, 202, 54, .12);
+  border: 1px solid rgba(255, 202, 54, .35);
+  padding: 3px 12px;
+  border-radius: 2px;
+  margin-bottom: 8px;
+}
+.cert-title {
+  margin: 4px 0 2px;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  color: #fff;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.6);
+  letter-spacing: 1px;
+}
+.cert-loc {
+  margin: 0 0 10px;
+  font-size: .95rem;
+  color: var(--grass);
+  font-weight: bold;
+}
+.cert-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f2c66d, transparent);
+  margin: 10px auto;
+  width: 75%;
+}
+.cert-text {
+  font-size: .9rem;
+  line-height: 1.45;
+  margin: 8px 0 12px;
+  color: #e2e8f0;
+}
+.cert-scores {
+  display: grid;
+  gap: 4px;
+  background: rgba(0, 0, 0, .35);
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  margin: 10px 0;
+  font-size: .85rem;
+  text-align: left;
+}
+.cert-score-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, .1);
+}
+.cert-score-row:last-child {
+  border-bottom: 0;
+  font-weight: bold;
+  color: #ffca36;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(242, 198, 109, .3);
+}
+.cert-footer {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: .84rem;
+}
+.cert-date {
+  color: #ffca36;
+  font-family: var(--display);
+  font-size: .88rem;
+}
+.cert-author {
+  color: #c8e6b8;
+  font-style: italic;
+}
+@media (max-width: 640px) {
+  .game-fold { top: calc(env(safe-area-inset-top, 0px) + 16px); left: auto; right: 62px; width: 40px; height: 44px; border: 2px solid var(--edge); }
+  .folded .game-fold { left: auto; right: 62px; }
+}
 </style>
 
 <div id="map" aria-label="Izometrická pixel-art mapa {{MESTO}}"><div id="osd"></div><canvas id="fx"></canvas></div>
 <div class="loading" id="loading">Načítám mapu…</div>
 
 <button class="fold" id="fold" type="button" aria-controls="panel" aria-expanded="true" aria-label="Zasunout panel" title="Zasunout panel">‹</button>
+<button class="game-fold" id="gameFold" type="button" hidden aria-controls="gamePanel" aria-label="Najdeš to?" title="Najdeš to?">🎯</button>
 <aside class="panel" id="panel">
   <div class="head">
     <div>
@@ -328,6 +477,56 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   </details>
 </aside>
 
+<aside class="panel game-panel" id="gamePanel" hidden>
+  <div class="game-head">
+    <h2>🎯 <span id="gameTitle">Najdeš to?</span></h2>
+    <button class="px-btn close-game" id="gameExitBtn" type="button" title="Ukončit herní mód">✕ Zavřít</button>
+  </div>
+
+  <div class="game-lvl-box">
+    <label for="gameLvlSelect">Sada / Úroveň:</label>
+    <select class="game-lvl-select" id="gameLvlSelect"></select>
+    <p class="game-lvl-desc" id="gameLvlDesc"></p>
+  </div>
+
+  <!-- Nastavení před startem -->
+  <div id="gamePreStart" class="game-prestart" style="display:grid; gap:12px;">
+    <div class="game-diff-box">
+      <label>Obtížnost (čas a počasí):</label>
+      <div class="game-diff-group" id="gameDiffGroup"></div>
+    </div>
+
+    <div class="game-season-box">
+      <label>Roční období:</label>
+      <div class="game-season-group" id="gameSeasonGroup">
+        <button class="px-btn" type="button" data-season="spring">Jaro</button>
+        <button class="px-btn" type="button" data-season="summer">Léto</button>
+        <button class="px-btn" type="button" data-season="autumn">Podzim</button>
+        <button class="px-btn" type="button" data-season="winter">Zima</button>
+      </div>
+    </div>
+
+    <button class="px-btn game-start-btn" id="gameStartBtn" type="button">▶ Spustit hledání</button>
+    <div class="game-extra-links" style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+      <button class="game-link-btn" id="gameHelpBtn" type="button">❓ Jak hrát?</button>
+      <button class="game-link-btn" id="gameLeaderboardBtn" type="button" style="display:none;">🏆 Žebříček</button>
+    </div>
+  </div>
+
+  <!-- Průběh hledání -->
+  <div id="gameRunning" class="game-running" style="display:none; gap:12px; grid-template-columns:1fr;">
+    <div class="game-status-bar">
+      <span class="game-timer" id="gameTimer">⏱ 00:00</span>
+      <span class="game-progress-badge" id="gameProgress">0 / 0</span>
+    </div>
+
+    <ul class="game-q-list" id="gameQList"></ul>
+
+    <p class="game-hint">💡 Hledejte objekty postupně podle pořadí a klikněte na ně na mapě. Když cíl najdete, označí se fajfkou a můžete pokračovat další otázkou.</p>
+    <button class="px-btn game-cancel-btn" id="gameCancelBtn" type="button">Vzdát aktuální pokus</button>
+  </div>
+</aside>
+
 <div class="follow" id="follow" hidden aria-live="polite"><span id="followTxt"></span><button class="px-btn" id="followStop" type="button" aria-label="Přestat sledovat">×</button></div>
 <section class="card" id="card" hidden aria-live="polite">
   <div class="grab" id="grab" aria-hidden="true"></div>
@@ -381,6 +580,158 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   <div class="pl-os" data-os="ios"><h4>iPhone a iPad (Safari)</h4><ol><li>Dole klepněte na <b>Sdílet</b> (čtvereček se šipkou nahoru).</li><li>Vyberte <b>Přidat na plochu</b>.</li><li>Potvrďte <b>Přidat</b>.</li></ol></div>
   <div class="pl-os" data-os="android"><h4>Android (Chrome)</h4><ol><li>Vpravo nahoře klepněte na <b>⋮</b>.</li><li>Vyberte <b>Přidat na plochu</b> nebo <b>Instalovat aplikaci</b>.</li><li>Potvrďte <b>Instalovat</b>.</li></ol></div>
   <div class="pl-os" data-os="pc"><h4>Počítač (Chrome, Edge)</h4><ol><li>V adresním řádku vpravo klikněte na ikonu <b>Instalovat</b> (monitor se šipkou).</li><li>Nebo v menu <b>⋮</b> zvolte <b>Uložit a sdílet → Instalovat stránku jako aplikaci</b>.</li></ol><p>V Safari na Macu: <b>Soubor → Přidat do Docku</b>.</p></div>
+</dialog>
+
+<dialog class="help" id="gameFoundDlg" aria-labelledby="gameFoundTitle">
+  <h2 id="gameFoundTitle">🎉 Našel(a) jsi to!</h2>
+  <p id="gameFoundName" style="font-size:1.05rem; font-weight:bold; color:var(--grass); margin:10px 0;"></p>
+  <p>Skvělé! Místo bylo označeno fajfkou a můžeš pokračovat v hledání další otázky.</p>
+  <div class="game-modal-btns">
+    <button class="px-btn" id="gameFoundClose" type="button" style="background:#ffca36; color:#1b2333; font-weight:bold; width:100%;">Pokračovat v hledání →</button>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameNickDlg" aria-labelledby="gameNickTitle">
+  <h2 id="gameNickTitle">🎉 Gratulujeme k dokončení!</h2>
+  <p>Zvládl(a) jsi kompletně všechny úrovně v této lokaci! Zadej svou přezdívku nebo jméno, které bude uvedeno na tvém oficiálním certifikátu:</p>
+  <form id="gameNickForm" style="display:grid; gap:12px; margin:16px 0 8px;">
+    <input type="text" id="gameNickInput" class="px-btn" style="text-align:left; padding:10px 12px; font-size:1.05rem; cursor:text; background:var(--panel-2); color:var(--ink); border:2px solid var(--edge);" placeholder="Tvoje přezdívka nebo jméno..." maxlength="40" required autofocus>
+    <button class="px-btn" type="submit" style="background:#ffca36; color:#1b2333; font-weight:bold; padding:10px; font-size:1.05rem;">Vystavit pamětní certifikát →</button>
+  </form>
+</dialog>
+
+<dialog class="help" id="gameWinDlg" aria-labelledby="gameWinTitle">
+  <button class="px-btn close" id="gameWinClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameWinTitle">🏆 Úroveň dokončena!</h2>
+  <p id="gameWinLvlText" style="font-size:1rem; font-weight:bold; margin-bottom:4px;"></p>
+  <p id="gameWinStats" style="font-size:1.15rem; color:#ffca36; margin:8px 0; font-family:var(--display);"></p>
+
+  <!-- Sběratelský certifikát pro printscreen po dokončení všech úrovní -->
+  <div id="gameCertCard" class="game-cert-card" style="display:none;">
+    <div class="cert-inner">
+      <div class="cert-badge">🏅 OFICIÁLNÍ CERTIFIKÁT OBJEVITELE 🏅</div>
+      <h3 class="cert-title">VŠECHNY ÚROVNĚ SPLNĚNY!</h3>
+      <p class="cert-loc">{{MESTO}} a okolí</p>
+      <div class="cert-nick-box" id="certNickBox" style="margin: 6px 0 8px; font-size: 1.15rem; color: #ffca36; font-family: var(--display);">
+        Hledač: <span id="certNick" style="color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,.6);"></span>
+      </div>
+      <div class="cert-divider"></div>
+      <p class="cert-text">Úspěšně a kompletně jsi nalezl(a) všechny dominanty, zvířata a skrytá místa v této lokaci!</p>
+      <div class="cert-scores" id="certScores"></div>
+      <div class="cert-footer">
+        <div class="cert-date" id="certDate">Dokončeno: --</div>
+        <div class="cert-author">Autor mapy posílá obrovské gratulace! 👏🎉</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-share-callout">
+    <p style="margin:0 0 6px 0;"><strong>📸 Sběratelský úlovek!</strong></p>
+    <p style="margin:0;">Udělej si <strong>snímek obrazovky (printscreen)</strong> na památku do své sbírky, nebo se pochlub přátelům a vyzvěte je, kdo to zvládne rychleji!</p>
+  </div>
+  <div class="game-modal-btns">
+    <a class="px-btn fb-btn" id="gameFbShare" href="#" target="_blank" rel="noopener">Sdílet na Facebooku</a>
+    <button class="px-btn" id="gameCopyShare" type="button">Zkopírovat výsledek</button>
+    <button class="px-btn" id="gameNextLvlBtn" type="button" style="background:var(--grass); color:#1b2333; font-weight:bold;">Další úroveň →</button>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameNextConfirmDlg" aria-labelledby="gameNextConfirmTitle">
+  <button class="px-btn close" id="gameNextConfirmClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameNextConfirmTitle">🗺 Pokračovat na další úroveň?</h2>
+  <p id="gameNextConfirmDesc" style="font-size:1.05rem; font-weight:bold; color:var(--grass); margin:12px 0;"></p>
+  <p>Přejete si ihned zahájit hledání v této úrovni?</p>
+  <div class="game-modal-btns">
+    <button class="px-btn" id="gameNextConfirmStart" type="button" style="background:#ffca36; color:#1b2333; font-weight:bold; font-size:1rem; padding:10px;">▶ Spustit hledání</button>
+    <button class="px-btn" id="gameNextConfirmLater" type="button">Upravit nastavení</button>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameExitDlg" aria-labelledby="gameExitTitle">
+  <button class="px-btn close" id="gameExitClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameExitTitle">🎯 Herní vyhodnocení</h2>
+  <p id="gameExitMsg"></p>
+  <div class="game-share-callout">
+    <p style="margin:0;">Sdílejte svůj dosažený čas nebo udělejte printscreen a pochlubte se ostatním!</p>
+  </div>
+  <div class="game-modal-btns">
+    <a class="px-btn fb-btn" id="gameExitFbShare" href="#" target="_blank" rel="noopener">Sdílet na Facebooku</a>
+    <button class="px-btn" id="gameExitCopyShare" type="button">Zkopírovat výsledek</button>
+    <button class="px-btn" id="gameExitConfirm" type="button">Opustit hru</button>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameFbGuideDlg" aria-labelledby="gameFbGuideTitle">
+  <button class="px-btn close" id="gameFbGuideClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameFbGuideTitle">📋 Výsledek zkopírován do schránky!</h2>
+  <p style="margin:8px 0; color:var(--grass); font-weight:bold;">
+    ✅ Vaše skóre a text výzvy jsou připraveny ve schránce.
+  </p>
+  <p style="font-size:.9rem; color:var(--muted); margin:6px 0; line-height:1.45;">
+    Facebook neumožňuje webům automaticky předvyplňovat text příspěvků. V nově otevřeném okně Facebooku stačí text <strong>vložit stiskem Ctrl+V</strong> (nebo podržením prstu a volbou „Vložit“ na mobilu). K příspěvku se automaticky připojí náhled mapy!
+  </p>
+  <div style="margin:10px 0; padding:10px; background:rgba(0,0,0,.3); border:1px solid var(--edge); border-radius:4px;">
+    <div style="font-size:.78rem; color:var(--muted); margin-bottom:4px;">Zkopírovaný text k vložení do příspěvku:</div>
+    <div id="gameFbGuideText" style="font-size:.85rem; color:var(--ink); font-style:italic; line-height:1.4; user-select:all;"></div>
+  </div>
+  <div class="game-modal-btns" style="margin-top:14px;">
+    <a class="px-btn fb-btn" id="gameFbGuideGoBtn" href="#" target="_blank" rel="noopener" style="font-weight:bold; font-size:.95rem; padding:10px 16px;">Přejít na Facebook ↗</a>
+    <button class="px-btn" id="gameFbGuideCopyAgain" type="button">Kopírovat znovu</button>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameHelpDlg" aria-labelledby="gameHelpTitle">
+  <button class="px-btn close" id="gameHelpClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameHelpTitle">❓ Jak hrát „Najdeš to?“</h2>
+  <div style="line-height:1.5; font-size:.92rem; display:grid; gap:10px;">
+    <p>Cílem hry je otestovat váš postřeh a znalost mapy. V každé úrovni máte za úkol postupně najít všechny zadané objekty, zvířata a významná místa.</p>
+    
+    <h3 style="color:var(--grass); margin:6px 0 2px;">Pravidla a postup:</h3>
+    <ul style="margin:0; padding-left:20px;">
+      <li><strong>Postupné pořadí:</strong> Otázky se zobrazují v náhodném pořadí, ale musíte je hledat přísně popořadě. Nelze přeskakovat.</li>
+      <li><strong>Hledání na mapě:</strong> Během hry jsou popisky na mapě skryté. Prozkoumejte terén a klikněte přímo na hledaný objekt nebo do jeho okolí.</li>
+      <li><strong>Odfajfkování:</strong> Jakmile cíl trefíte, otázka se označí fajfkou ✓ a odemkne se další cíl.</li>
+      <li><strong>Obtížnosti:</strong> Můžete hrát ve dne (snadná), v dešti a šeru (střední) nebo v noci s rozsvícenými lampami (těžká).</li>
+      <li><strong>Odemknutí úrovní:</strong> Dokončením aktuální úrovně se vám odemkne další. Váš postup i nejlepší časy se ukládají v prohlížeči.</li>
+      <li><strong>Finální certifikát:</strong> Po dokončení všech úrovní získáte oficiální pamětní certifikát s vaším jménem, časy a datem pro printscreen do sbírky.</li>
+    </ul>
+
+    <div style="background:rgba(255, 202, 54, .1); border-left:3px solid #ffca36; padding:8px 10px; margin-top:4px;">
+      <strong style="color:#ffca36;">ℹ️ Informace o žebříčku:</strong><br>
+      Žebříček nejlepších hledačů se aktualizuje a přepisuje po ruční kontrole autorem mapy (z důvodu ověření férovosti časů a filtrace nevhodných přezdívek).
+    </div>
+  </div>
+</dialog>
+
+<dialog class="help" id="gameLeaderboardDlg" aria-labelledby="gameLeaderboardTitle">
+  <button class="px-btn close" id="gameLeaderboardClose" type="button" aria-label="Zavřít">×</button>
+  <h2 id="gameLeaderboardTitle">🏆 Žebříček nejlepších hledačů</h2>
+  
+  <div id="leaderboardLoading" style="text-align:center; padding:16px; color:var(--muted);">Načítám oficiální žebříček…</div>
+  
+  <div id="leaderboardEmpty" style="display:none; text-align:center; padding:16px; background:rgba(0,0,0,.2); border:1px solid var(--edge);">
+    <p style="font-size:1.05rem; color:#ffca36; margin:0 0 6px;">⏳ Žebříček se připravuje</p>
+    <p style="margin:0; font-size:.9rem; line-height:1.45; color:var(--muted);">Autor mapy žebříček zveřejní po zpracování a schválení zaslaných výsledků.</p>
+  </div>
+
+  <div id="leaderboardContent" style="display:none;">
+    <p style="font-size:.85rem; color:var(--muted); margin:0 0 8px;">Oficiální pořadí ověřených hledačů schválené autorem mapy:</p>
+    <div style="max-height:280px; overflow-y:auto; border:1px solid var(--edge); background:rgba(0,0,0,.25);">
+      <table style="width:100%; border-collapse:collapse; font-size:.88rem; text-align:left;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--edge); background:var(--panel-2); color:#ffca36;">
+            <th style="padding:6px 8px;">#</th>
+            <th style="padding:6px 8px;">Hledač</th>
+            <th style="padding:6px 8px;">Celkový čas</th>
+            <th style="padding:6px 8px;">Obtížnost</th>
+            <th style="padding:6px 8px;">Datum</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardTbody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:.8rem; color:var(--muted); margin:8px 0 0; font-style:italic;">Žebříček se přepisuje po kontrole autorem.</p>
+  </div>
 </dialog>
 <nav class="mbar" id="mbar" aria-label="Rychlé ovládání">
   <button class="px-btn" type="button" data-s="spring">Jaro</button>
@@ -903,8 +1254,10 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   }
 
   const vpToImg = (pos) => { const p = viewer.viewport.viewerElementToViewportCoordinates(pos); return [p.x * W, p.y * W]; };
+  let onGameClick = null;
   viewer.addHandler('canvas-click', (e) => {
     if (!e.quick) return;
+    if (typeof onGameClick === 'function' && onGameClick(e)) return;
     if (typeof PLANES !== 'undefined') {
       const pl = PLANES.drawn.find((q) => Math.hypot(q[0] - e.position.x, q[1] - e.position.y) < 26);
       if (pl) { planeFollow(pl[2]); return; }
@@ -1056,10 +1409,16 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     const t = f ? 'Vysunout panel' : 'Zasunout panel';
     $('fold').textContent = f ? '›' : '‹'; $('fold').title = t; $('fold').setAttribute('aria-label', t); $('fold').setAttribute('aria-expanded', String(!f));
     $('panel').inert = f && !isMobile();
+    if ($('gamePanel')) $('gamePanel').inert = f && !isMobile();
     try { localStorage.setItem('izo-fold', f ? '1' : '0'); } catch {}
   }
   $('fold').addEventListener('click', () => setFold(!document.body.classList.contains('folded')));
-  new ResizeObserver(() => document.documentElement.style.setProperty('--pw', $('panel').offsetWidth + 'px')).observe($('panel'));
+  const updatePw = () => {
+    const p = !$('gamePanel')?.hidden ? $('gamePanel') : $('panel');
+    if (p) document.documentElement.style.setProperty('--pw', p.offsetWidth + 'px');
+  };
+  new ResizeObserver(updatePw).observe($('panel'));
+  if ($('gamePanel')) new ResizeObserver(updatePw).observe($('gamePanel'));
   try { if (localStorage.getItem('izo-fold') === '1' && !isMobile()) setFold(true); } catch {}
   if (isMobile()) { setMenu(false); $('placesBox').open = false; }
   $('l-labels').addEventListener('change', (e) => $('map').classList.toggle('nolabels', !e.target.checked));
@@ -2674,5 +3033,633 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     }
   }
   requestAnimationFrame(frame);
+
+  // ---------- herní modul "Najdeš to?" ----------
+  function initNajdiTo(cfg) {
+    if (!cfg || !cfg.levels || !cfg.levels.length) return;
+    const gameFold = $('gameFold');
+    const gamePanel = $('gamePanel');
+    if (!gameFold || !gamePanel) return;
+
+    gameFold.hidden = false;
+    $('gameTitle').textContent = cfg.title || 'Najdeš to?';
+    gameFold.title = cfg.title || 'Najdeš to?';
+    gameFold.setAttribute('aria-label', cfg.title || 'Najdeš to?');
+
+    let gameActive = false;
+    let gameRunning = false;
+    let currentLvlIdx = 0;
+    let currentDiffKey = 'easy';
+    let shuffledQuestions = [];
+    let currentQIdx = 0;
+    let startTime = 0;
+    let timerInterval = null;
+
+    let sessionId = '';
+    try {
+      sessionId = sessionStorage.getItem('izo-najdito-session');
+      if (!sessionId) {
+        sessionId = 's_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+        sessionStorage.setItem('izo-najdito-session', sessionId);
+      }
+    } catch {
+      sessionId = 's_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+    }
+
+    const STORAGE_KEY = 'izo-najdito-progress';
+    let progress = { unlocked: 1, bestTimes: {} };
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) progress = Object.assign(progress, JSON.parse(saved));
+    } catch {}
+
+    function saveProgress() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch {}
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function refreshLvlSelect() {
+      const sel = $('gameLvlSelect');
+      sel.innerHTML = '';
+      cfg.levels.forEach((lvl, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        const isLocked = lvl.lvl > (progress.unlocked || 1);
+        const best = progress.bestTimes && progress.bestTimes[lvl.lvl];
+        const bestStr = best ? ` (${formatTime(best.sec)})` : '';
+        opt.textContent = `Úroveň ${lvl.lvl}: ${lvl.text}${bestStr}` + (isLocked ? ' 🔒' : '');
+        opt.disabled = isLocked;
+        sel.appendChild(opt);
+      });
+      sel.value = currentLvlIdx;
+      updateLvlInfo();
+    }
+
+    function updateLvlInfo() {
+      const lvl = cfg.levels[currentLvlIdx];
+      $('gameLvlDesc').textContent = lvl ? lvl.text : '';
+    }
+    $('gameLvlSelect').addEventListener('change', (e) => {
+      if (gameRunning) return;
+      currentLvlIdx = parseInt(e.target.value, 10) || 0;
+      updateLvlInfo();
+    });
+
+    const diffGroup = $('gameDiffGroup');
+    diffGroup.innerHTML = '';
+    const diffKeys = Object.keys(cfg.difficulties || {});
+    if (!diffKeys.length) {
+      cfg.difficulties = {
+        easy: { name: 'Lehká (Den)', time: 0.0, weather: 'clear' },
+        medium: { name: 'Střední (Déšť a šero)', time: 0.5, weather: 'rain' },
+        hard: { name: 'Těžká (Noc)', time: 1.0, weather: 'clear' }
+      };
+    }
+    Object.entries(cfg.difficulties).forEach(([key, d]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'px-btn game-diff-btn' + (key === currentDiffKey ? ' active' : '');
+      btn.dataset.diff = key;
+      btn.textContent = d.name;
+      btn.addEventListener('click', () => {
+        if (gameRunning) return;
+        currentDiffKey = key;
+        diffGroup.querySelectorAll('.game-diff-btn').forEach((b) => b.classList.toggle('active', b.dataset.diff === key));
+        applyDifficulty(d);
+      });
+      diffGroup.appendChild(btn);
+    });
+
+    function applyDifficulty(d) {
+      if (!d) return;
+      if (typeof d.time === 'number') {
+        state.night = d.time;
+        $('night').value = Math.round(d.time * 100);
+        $('realTime').checked = false;
+        applyTime();
+      }
+      if (d.weather) {
+        if ($('realWeather')) $('realWeather').checked = false;
+        setWeather(d.weather);
+      }
+    }
+
+    const seasonGroup = $('gameSeasonGroup');
+    function updateSeasonBtns() {
+      seasonGroup.querySelectorAll('button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.season === state.season);
+      });
+    }
+    seasonGroup.querySelectorAll('button').forEach((b) => {
+      b.addEventListener('click', () => {
+        setSeason(b.dataset.season);
+        updateSeasonBtns();
+      });
+    });
+
+    function setGameMode(active) {
+      gameActive = active;
+      document.body.classList.toggle('game-mode', active);
+      gameFold.classList.toggle('active', active);
+
+      if (active) {
+        $('panel').hidden = true;
+        gamePanel.hidden = false;
+        if (document.body.classList.contains('folded')) setFold(false);
+        refreshLvlSelect();
+        updateSeasonBtns();
+        applyDifficulty(cfg.difficulties[currentDiffKey]);
+      } else {
+        if (gameRunning) stopTimer();
+        gameRunning = false;
+        $('gamePreStart').style.display = 'grid';
+        $('gameRunning').style.display = 'none';
+        gamePanel.hidden = true;
+        $('panel').hidden = false;
+        updatePw();
+      }
+    }
+
+    gameFold.addEventListener('click', () => {
+      if (gameActive) {
+        if (gameRunning) showExitDialog();
+        else setGameMode(false);
+      } else {
+        setGameMode(true);
+      }
+    });
+
+    $('gameExitBtn').addEventListener('click', () => {
+      if (gameRunning) showExitDialog();
+      else setGameMode(false);
+    });
+
+    const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    // Nápověda "Jak hrát?"
+    $('gameHelpBtn').addEventListener('click', () => {
+      $('gameHelpDlg').showModal();
+    });
+    $('gameHelpClose').addEventListener('click', () => {
+      $('gameHelpDlg').close();
+    });
+
+    // Žebříček (pokud je nastaveno API)
+    if (cfg.api_url) {
+      $('gameLeaderboardBtn').style.display = 'inline-block';
+    }
+    $('gameLeaderboardBtn').addEventListener('click', async () => {
+      $('gameLeaderboardDlg').showModal();
+      $('leaderboardLoading').style.display = 'block';
+      $('leaderboardEmpty').style.display = 'none';
+      $('leaderboardContent').style.display = 'none';
+
+      const leaderboardUrl = cfg.leaderboard_url || 'najdi_to_leaderboard.json';
+      try {
+        const resp = await fetch(leaderboardUrl + '?_t=' + Date.now());
+        if (!resp.ok) throw new Error('Nelze načíst');
+        const data = await resp.json();
+        const rows = Array.isArray(data) ? data : (data.leaderboard || []);
+        if (!rows.length) throw new Error('Prázdný žebříček');
+
+        $('leaderboardTbody').innerHTML = rows.map((r, i) => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+            <td style="padding:6px 8px; font-weight:bold; color:#ffca36;">${i + 1}.</td>
+            <td style="padding:6px 8px; font-weight:bold;">${escapeHtml(r.nick || 'Hledač')}</td>
+            <td style="padding:6px 8px;">${typeof r.total_time === 'number' ? formatTime(r.total_time) : (r.total_time || '--')}</td>
+            <td style="padding:6px 8px; color:var(--muted);">${escapeHtml(r.difficulty || 'Lehká')}</td>
+            <td style="padding:6px 8px; font-size:.8rem; color:var(--muted);">${escapeHtml(r.date || '')}</td>
+          </tr>
+        `).join('');
+        $('leaderboardLoading').style.display = 'none';
+        $('leaderboardContent').style.display = 'block';
+      } catch (err) {
+        $('leaderboardLoading').style.display = 'none';
+        $('leaderboardEmpty').style.display = 'block';
+      }
+    });
+    $('gameLeaderboardClose').addEventListener('click', () => {
+      $('gameLeaderboardDlg').close();
+    });
+    $('gameFbGuideClose').addEventListener('click', () => {
+      $('gameFbGuideDlg').close();
+    });
+
+    function startLevel(idx) {
+      if (typeof idx === 'number') currentLvlIdx = idx;
+      const lvl = cfg.levels[currentLvlIdx];
+      if (!lvl || !lvl.questions || !lvl.questions.length) return;
+
+      shuffledQuestions = shuffle(lvl.questions);
+      currentQIdx = 0;
+      gameRunning = true;
+      startTime = Date.now();
+
+      $('gamePreStart').style.display = 'none';
+      $('gameRunning').style.display = 'grid';
+      $('gameTimer').textContent = '⏱ 00:00';
+      updateQuestionsList();
+      refreshLvlSelect();
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        $('gameTimer').textContent = '⏱ ' + formatTime(elapsed);
+      }, 1000);
+
+      if (lvl.camera) {
+        try { goView(lvl.camera); } catch (err) { console.warn('Kamera:', err); }
+      }
+    }
+
+    $('gameStartBtn').addEventListener('click', () => {
+      startLevel(currentLvlIdx);
+    });
+
+    function stopTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    function shareToFacebook(shareText) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareText).catch(() => {});
+      }
+      let targetUrl = location.href.split('#')[0];
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        targetUrl = 'https://izomapa-detrichov.petrhamtil.cz/';
+      }
+      const fbUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(targetUrl);
+      $('gameFbGuideText').textContent = shareText;
+      $('gameFbGuideGoBtn').href = fbUrl;
+      $('gameFbGuideGoBtn').onclick = () => {
+        $('gameFbGuideDlg').close();
+      };
+      $('gameFbGuideCopyAgain').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast('Výsledek byl znovu zkopírován do schránky!');
+        } catch {
+          toast('Zkopírujte text z rámečku');
+        }
+      };
+      $('gameFbGuideDlg').showModal();
+    }
+
+    $('gameCancelBtn').addEventListener('click', () => {
+      showExitDialog();
+    });
+
+    function updateQuestionsList() {
+      const ul = $('gameQList');
+      ul.innerHTML = '';
+      $('gameProgress').textContent = `${currentQIdx} / ${shuffledQuestions.length}`;
+
+      shuffledQuestions.forEach((q, idx) => {
+        const li = document.createElement('li');
+        li.className = 'game-q-item ' + (idx < currentQIdx ? 'q-done' : idx === currentQIdx ? 'q-active' : 'q-locked');
+        const ico = document.createElement('span');
+        ico.className = 'q-ico';
+        ico.textContent = idx < currentQIdx ? '✓' : idx === currentQIdx ? '🔍' : '🔒';
+        const txt = document.createElement('span');
+        txt.className = 'q-txt';
+        txt.textContent = q.text;
+        li.append(ico, txt);
+        ul.appendChild(li);
+      });
+    }
+
+    onGameClick = (e) => {
+      if (!gameActive || !gameRunning || currentQIdx >= shuffledQuestions.length) return false;
+
+      const [ix, iy] = vpToImg(e.position);
+      const [wx, wy] = imgToWorld(ix, iy);
+      const [clickLon, clickLat] = lonlat(wx, wy);
+
+      const curQ = shuffledQuestions[currentQIdx];
+      const rM = curQ.radius || 35;
+      const rPx = rM * 5.0;
+
+      let hitFound = false;
+
+      if (curQ.xy && Math.hypot(ix - curQ.xy[0], iy - curQ.xy[1]) <= rPx) {
+        hitFound = true;
+      }
+
+      if (!hitFound && curQ.targets && curQ.targets.length) {
+        for (const t of curQ.targets) {
+          if (t.xy && Math.hypot(ix - t.xy[0], iy - t.xy[1]) <= rPx) { hitFound = true; break; }
+          if (t.lat && t.lon && geoM(clickLat, clickLon, t) <= rM) { hitFound = true; break; }
+        }
+      }
+
+      if (!hitFound && curQ.lat && curQ.lon) {
+        if (geoM(clickLat, clickLon, curQ) <= rM) hitFound = true;
+      }
+
+      if (!hitFound) {
+        const b = hit(ix, iy);
+        if (b && curQ.answer) {
+          const normAns = norm(curQ.answer);
+          const pl = placeOf(b);
+          if (pl && (norm(pl.name).includes(normAns) || normAns.includes(norm(pl.name)))) {
+            hitFound = true;
+          }
+        }
+      }
+
+      if (hitFound) {
+        handleQuestionSuccess(curQ);
+        return true;
+      }
+      return true;
+    };
+
+    function handleQuestionSuccess(q) {
+      currentQIdx++;
+      updateQuestionsList();
+
+      if (currentQIdx >= shuffledQuestions.length) {
+        stopTimer();
+        const elapsedSec = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
+        const lvl = cfg.levels[currentLvlIdx];
+
+        const nextLvl = lvl.lvl + 1;
+        if (nextLvl > (progress.unlocked || 1)) {
+          progress.unlocked = nextLvl;
+        }
+        if (!progress.bestTimes) progress.bestTimes = {};
+        const prevBest = progress.bestTimes[lvl.lvl];
+        const diffName = (cfg.difficulties[currentDiffKey] || {}).name || currentDiffKey;
+        if (!prevBest || elapsedSec < prevBest.sec) {
+          progress.bestTimes[lvl.lvl] = { sec: elapsedSec, diff: diffName };
+        }
+        saveProgress();
+        refreshLvlSelect();
+
+        if (cfg.api_url) {
+          let attempt = 1;
+          try {
+            attempt = parseInt(localStorage.getItem('izo-najdito-attempts') || '1', 10);
+          } catch {}
+          let savedNick = '';
+          try {
+            savedNick = progress.nick || localStorage.getItem('izo-najdito-nick') || '';
+          } catch {}
+
+          let currentTotalSec = 0;
+          try {
+            cfg.levels.forEach((l) => {
+              const rec = progress.bestTimes[l.lvl];
+              if (rec) currentTotalSec += rec.sec;
+            });
+          } catch {}
+
+          fetch(cfg.api_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'level_complete',
+              session_id: sessionId,
+              lvl: lvl.lvl,
+              level_time: elapsedSec,
+              total_time: currentTotalSec,
+              difficulty: diffName,
+              attempt: attempt,
+              location: cfg.title || 'Izomapa',
+              nick: savedNick
+            })
+          }).catch((err) => console.warn('Nelze zaznamenat úroveň na server:', err));
+        }
+
+        const allDone = cfg.levels.every((l) => progress.bestTimes && progress.bestTimes[l.lvl]);
+        if (allDone) {
+          promptNickAndFinish(lvl, elapsedSec, diffName);
+        } else {
+          showWinDialog(lvl, elapsedSec, diffName);
+        }
+      } else {
+        $('gameFoundName').textContent = q.answer || q.text;
+        $('gameFoundDlg').showModal();
+      }
+    }
+
+    $('gameFoundClose').addEventListener('click', () => {
+      $('gameFoundDlg').close();
+    });
+
+    function promptNickAndFinish(lvl, elapsedSec, diffName) {
+      const savedNick = progress.nick || '';
+      try {
+        const stored = localStorage.getItem('izo-najdito-nick');
+        if (stored) $('gameNickInput').value = stored;
+        else if (savedNick) $('gameNickInput').value = savedNick;
+      } catch {}
+
+      const submitHandler = (e) => {
+        e.preventDefault();
+        $('gameNickForm').removeEventListener('submit', submitHandler);
+        $('gameNickDlg').close();
+
+        const nick = $('gameNickInput').value.trim() || 'Úspěšný objevitel';
+        progress.nick = nick;
+        try { localStorage.setItem('izo-najdito-nick', nick); } catch {}
+
+        let attempt = 1;
+        try {
+          attempt = parseInt(localStorage.getItem('izo-najdito-attempts') || '0', 10) + 1;
+          localStorage.setItem('izo-najdito-attempts', String(attempt));
+        } catch {}
+
+        if (cfg.api_url) {
+          let totalSec = 0;
+          const levelsPayload = {};
+          cfg.levels.forEach((l) => {
+            const rec = progress.bestTimes[l.lvl];
+            const s = rec ? rec.sec : 0;
+            totalSec += s;
+            levelsPayload[l.lvl] = s;
+          });
+
+          fetch(cfg.api_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'game_complete',
+              session_id: sessionId,
+              nick: nick,
+              total_time: totalSec,
+              difficulty: diffName,
+              attempt: attempt,
+              location: cfg.title || 'Izomapa',
+              levels: levelsPayload
+            })
+          }).catch((err) => console.warn('Nelze odeslat výsledek na server:', err));
+        }
+
+        saveProgress();
+        showWinDialog(lvl, elapsedSec, diffName);
+      };
+
+      $('gameNickForm').addEventListener('submit', submitHandler);
+      $('gameNickDlg').showModal();
+    }
+
+    function showWinDialog(lvl, elapsedSec, diffName) {
+      const timeStr = formatTime(elapsedSec);
+      const allDone = cfg.levels.every((l) => progress.bestTimes && progress.bestTimes[l.lvl]);
+      const certCard = $('gameCertCard');
+      if (certCard) certCard.style.display = allDone ? 'block' : 'none';
+
+      const now = new Date();
+      if (allDone && !progress.completedAt) {
+        progress.completedAt = now.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }) + ' v ' + now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+        saveProgress();
+      }
+
+      let totalSec = 0;
+      if (allDone) {
+        $('gameWinTitle').textContent = '👑 Všechny úrovně dokončeny!';
+        $('gameWinLvlText').textContent = 'Zvládl(a) jsi kompletně všechny úrovně v této lokaci!';
+        $('certNick').textContent = progress.nick || 'Úspěšný objevitel';
+        $('certDate').textContent = 'Dokončeno: ' + (progress.completedAt || now.toLocaleDateString('cs-CZ'));
+
+        const scoresEl = $('certScores');
+        scoresEl.innerHTML = '';
+        cfg.levels.forEach((l) => {
+          const rec = progress.bestTimes[l.lvl];
+          const sec = rec ? rec.sec : 0;
+          totalSec += sec;
+          const row = document.createElement('div');
+          row.className = 'cert-score-row';
+          row.innerHTML = `<span>Úroveň ${l.lvl} (${l.text}):</span> <span>${formatTime(sec)}</span>`;
+          scoresEl.appendChild(row);
+        });
+        const totalRow = document.createElement('div');
+        totalRow.className = 'cert-score-row';
+        totalRow.innerHTML = `<span>CELKOVÝ ČAS:</span> <span>${formatTime(totalSec)}</span>`;
+        scoresEl.appendChild(totalRow);
+      } else {
+        $('gameWinTitle').textContent = '🏆 Úroveň dokončena!';
+        $('gameWinLvlText').textContent = `Úroveň ${lvl.lvl}: ${lvl.text}`;
+      }
+      $('gameWinStats').textContent = `⏱ Čas: ${timeStr} | Obtížnost: ${diffName}`;
+
+      const pageUrl = location.href.split('#')[0];
+      const player = progress.nick ? `${progress.nick}: ` : '';
+      const shareText = allDone
+        ? `👑 ${player}Dokončil(a) jsem kompletně všechny úrovně hry „${cfg.title || 'Najdeš to?'}“ v celkovém čase ${formatTime(totalSec)}! Autor posílá velké gratulace. Trumfne mě někdo? ${pageUrl}`
+        : `🏆 ${player}Najdeš to? Dokončil(a) jsem úroveň „${lvl.text}“ v čase ${timeStr} na obtížnost ${diffName}! Kdo to dá rychleji? ${pageUrl}`;
+
+      $('gameFbShare').onclick = (e) => {
+        e.preventDefault();
+        shareToFacebook(shareText);
+      };
+
+      $('gameCopyShare').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast('Výsledek a výzva zkopírovány do schránky!');
+        } catch {
+          toast('Text výzvy: ' + shareText);
+        }
+      };
+
+      const hasNext = currentLvlIdx + 1 < cfg.levels.length && cfg.levels[currentLvlIdx + 1].lvl <= progress.unlocked;
+      $('gameNextLvlBtn').style.display = hasNext ? 'inline-block' : 'none';
+      $('gameNextLvlBtn').onclick = () => {
+        $('gameWinDlg').close();
+        const nextIdx = currentLvlIdx + 1;
+        const nextLvl = cfg.levels[nextIdx];
+
+        $('gameNextConfirmDesc').textContent = `Úroveň ${nextLvl.lvl}: ${nextLvl.text}`;
+
+        $('gameNextConfirmStart').onclick = () => {
+          $('gameNextConfirmDlg').close();
+          startLevel(nextIdx);
+        };
+
+        const laterHandler = () => {
+          $('gameNextConfirmDlg').close();
+          currentLvlIdx = nextIdx;
+          refreshLvlSelect();
+          $('gamePreStart').style.display = 'grid';
+          $('gameRunning').style.display = 'none';
+          gameRunning = false;
+        };
+
+        $('gameNextConfirmLater').onclick = laterHandler;
+        $('gameNextConfirmClose').onclick = laterHandler;
+
+        $('gameNextConfirmDlg').showModal();
+      };
+
+      $('gameWinClose').onclick = () => {
+        $('gameWinDlg').close();
+        $('gamePreStart').style.display = 'grid';
+        $('gameRunning').style.display = 'none';
+        gameRunning = false;
+      };
+
+      $('gameWinDlg').showModal();
+    }
+
+    function showExitDialog() {
+      stopTimer();
+      const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+      const timeStr = formatTime(elapsedSec);
+      const lvl = cfg.levels[currentLvlIdx];
+      const diffName = (cfg.difficulties[currentDiffKey] || {}).name || currentDiffKey;
+
+      $('gameExitMsg').innerHTML = `V úrovni <strong>${lvl.text}</strong> máte nalezeno <strong>${currentQIdx} z ${shuffledQuestions.length}</strong> objektů.<br>Dosažený čas: <strong>${timeStr}</strong> (${diffName}).`;
+
+      const pageUrl = location.href.split('#')[0];
+      const shareText = `🎯 Najdeš to? V úrovni „${lvl.text}“ mám nalezeno ${currentQIdx}/${shuffledQuestions.length} objektů za ${timeStr}! Trumfne mě někdo? ${pageUrl}`;
+
+      $('gameExitFbShare').onclick = (e) => {
+        e.preventDefault();
+        shareToFacebook(shareText);
+      };
+
+      $('gameExitCopyShare').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast('Výsledek byl zkopírován do schránky!');
+        } catch {}
+      };
+
+      $('gameExitConfirm').onclick = () => {
+        $('gameExitDlg').close();
+        setGameMode(false);
+      };
+
+      $('gameExitClose').onclick = () => {
+        $('gameExitDlg').close();
+        if (gameRunning) {
+          timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            $('gameTimer').textContent = '⏱ ' + formatTime(elapsed);
+          }, 1000);
+        }
+      };
+
+      $('gameExitDlg').showModal();
+    }
+  }
+
+  if (OV.najdi_to) initNajdiTo(OV.najdi_to);
 })();
 </script>

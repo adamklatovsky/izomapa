@@ -27,6 +27,12 @@ assets/custom_models.js
 assets/upresneni.json
 assets/dominanty.json
 assets/oblasti.json
+assets/najdi_to.json
+/najdi_to.json
+/najdi_to_leaderboard.json
+/site/najdi_to_leaderboard.json
+/site/api/config.php
+api/config.php
 
 # hlášení: vlastní konfigurace a hesla serveru
 /wrangler.jsonc
