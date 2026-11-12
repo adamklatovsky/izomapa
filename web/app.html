@@ -263,7 +263,41 @@ body.game-mode .pin { display: none !important; }
 .game-panel[hidden] { display: none !important; }
 .game-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--edge); padding-bottom: 8px; }
 .game-head h2 { margin: 0; font-family: var(--display); font-size: 1.25rem; color: #ffca36; }
+.game-head-btns { display: flex; align-items: center; gap: 6px; }
+.game-head .min-game { width: 30px; height: 30px; min-height: 30px; padding: 0; display: grid; place-items: center; }
+.game-head .min-game svg { display: block; margin: auto; }
 .game-head .close-game { padding: 4px 10px; font-size: .88rem; }
+.panel.game-panel.minimized {
+  gap: 6px;
+  padding: 8px 10px;
+  max-height: max-content;
+}
+.panel.game-panel.minimized .game-lvl-box,
+.panel.game-panel.minimized .game-prestart,
+.panel.game-panel.minimized .game-hint,
+.panel.game-panel.minimized .game-cancel-btn {
+  display: none !important;
+}
+.panel.game-panel.minimized .game-head {
+  padding-bottom: 4px;
+}
+.panel.game-panel.minimized .game-status-bar {
+  padding: 4px 8px;
+}
+.panel.game-panel.minimized .game-timer {
+  font-size: 1.05rem;
+}
+.panel.game-panel.minimized .game-q-list {
+  margin: 0;
+  gap: 4px;
+}
+.panel.game-panel.minimized .game-q-item:not(.q-active) {
+  display: none !important;
+}
+.panel.game-panel.minimized .game-q-item.q-active {
+  padding: 6px 8px;
+  font-size: .88rem;
+}
 .game-lvl-box { display: grid; gap: 6px; }
 .game-lvl-box label { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .game-lvl-select { width: 100%; padding: 6px 8px; background: var(--panel-2); color: var(--ink); border: 2px solid var(--edge); font-family: inherit; font-size: .95rem; }
@@ -391,6 +425,7 @@ body.game-mode .pin { display: none !important; }
   font-style: italic;
 }
 @media (max-width: 640px) {
+  .game-head .min-game { width: 36px; height: 36px; min-height: 36px; }
   .game-fold {
     top: calc(env(safe-area-inset-top, 0px) + 72px);
     left: auto;
@@ -494,7 +529,10 @@ body.game-mode .pin { display: none !important; }
 <aside class="panel game-panel" id="gamePanel" hidden>
   <div class="game-head">
     <h2>🎯 <span id="gameTitle">Najdeš to?</span></h2>
-    <button class="px-btn close-game" id="gameExitBtn" type="button" title="Ukončit herní mód">✕ Zavřít</button>
+    <div class="game-head-btns">
+      <button class="px-btn min-game" id="gameMinBtn" type="button" aria-label="Minimalizovat panel" title="Minimalizovat panel"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="currentColor"><rect x="2" y="11" width="12" height="2.5"/></svg></button>
+      <button class="px-btn close-game" id="gameExitBtn" type="button" title="Ukončit herní mód">✕ Zavřít</button>
+    </div>
   </div>
 
   <div class="game-lvl-box">
@@ -3062,12 +3100,34 @@ body.game-mode .pin { display: none !important; }
 
     let gameActive = false;
     let gameRunning = false;
+    let gameMinimized = false;
     let currentLvlIdx = 0;
     let currentDiffKey = 'easy';
     let shuffledQuestions = [];
     let currentQIdx = 0;
     let startTime = 0;
     let timerInterval = null;
+
+    const gameMinBtn = $('gameMinBtn');
+    const MIN_ICO = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="currentColor"><rect x="2" y="11" width="12" height="2.5"/></svg>';
+    const MAX_ICO = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="12" height="12"/></svg>';
+
+    function setMinimized(min) {
+      gameMinimized = min;
+      gamePanel.classList.toggle('minimized', min);
+      if (gameMinBtn) {
+        gameMinBtn.innerHTML = min ? MAX_ICO : MIN_ICO;
+        const title = min ? 'Maximalizovat panel' : 'Minimalizovat panel';
+        gameMinBtn.title = title;
+        gameMinBtn.setAttribute('aria-label', title);
+      }
+    }
+
+    if (gameMinBtn) {
+      gameMinBtn.addEventListener('click', () => {
+        setMinimized(!gameMinimized);
+      });
+    }
 
     let sessionId = '';
     try {
@@ -3200,6 +3260,7 @@ body.game-mode .pin { display: none !important; }
       } else {
         if (gameRunning) stopTimer();
         gameRunning = false;
+        setMinimized(false);
         $('gamePreStart').style.display = 'grid';
         $('gameRunning').style.display = 'none';
         gamePanel.hidden = true;
@@ -3288,6 +3349,7 @@ body.game-mode .pin { display: none !important; }
       $('gameTimer').textContent = '⏱ 00:00';
       updateQuestionsList();
       refreshLvlSelect();
+      setMinimized(true);
 
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(() => {
@@ -3533,6 +3595,7 @@ body.game-mode .pin { display: none !important; }
     }
 
     function showWinDialog(lvl, elapsedSec, diffName) {
+      setMinimized(false);
       const timeStr = formatTime(elapsedSec);
       const allDone = cfg.levels.every((l) => progress.bestTimes && progress.bestTimes[l.lvl]);
       const certCard = $('gameCertCard');
