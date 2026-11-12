@@ -391,8 +391,22 @@ body.game-mode .pin { display: none !important; }
   font-style: italic;
 }
 @media (max-width: 640px) {
-  .game-fold { top: calc(env(safe-area-inset-top, 0px) + 16px); left: auto; right: 62px; width: 40px; height: 44px; border: 2px solid var(--edge); }
-  .folded .game-fold { left: auto; right: 62px; }
+  .game-fold {
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    left: auto;
+    right: 0;
+    width: 32px;
+    height: 48px;
+    border: 2px solid var(--edge);
+    border-right: 0;
+    box-shadow: -3px 3px 0 rgba(0, 0, 0, .35);
+    z-index: 4;
+  }
+  .folded .game-fold {
+    left: auto;
+    right: 0;
+    border-right: 0;
+  }
 }
 </style>
 
