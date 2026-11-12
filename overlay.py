@@ -374,8 +374,10 @@ for a_n, b_n, n_ in TRAM_LINES:
     trams.append({'w': [[round(x, 1), round(y, 1)] for x, y, z in pts], 'p': [list(px(x, y, z)) for x, y, z in pts], 'n': n_,
                   'stops': [list(px(TSTOP[n][0], TSTOP[n][1], 0)[:2]) + [n] for n in st]})
     print('tramvaj', a_n, '–', b_n, round(sum(math.hypot(x1 - x0, y1 - y0) for (x0, y0), (x1, y1) in zip(on, on[1:]))), 'm', len(st), 'zastávek')
+# semafory (nastroje/semafory.py): [x, y, křižovatka] ve společných souřadnicích; silnicím je přiřadí prohlížeč
+signals = [[round(float(x), 1), round(float(y), 1), j] for la, lo, j in json.load(open('assets/semafory.json')) for x, y in [to_local(lo, la)]] if os.path.exists('assets/semafory.json') else []
 json.dump({'w': W, 'h': H, 'cam': cam, 'districts': districts, 'needs': needs, 'xmas': nam, 'chunks': {CKEY[c]: CHUNKS[c] for c in chunks}, 'bus': bus_route, 'trams': trams, 'decks': decks,
-           'streets': streets, 'places': places, 'neighbors': neighbors},
+           'streets': streets, 'places': places, 'neighbors': neighbors, **({'signals': signals} if signals else {})},
           open('site/overlay.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 json.dump(addr_index, open('site/search.json', 'w'), separators=(',', ':'), ensure_ascii=False)   # adresy pro hledání, načte se až při psaní
 print('čtverců', len(chunks), 'budov', sum(len(v['buildings']) for v in per_chunk.values()), 'adres', len(addr_index),
