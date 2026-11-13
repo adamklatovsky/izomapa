@@ -15,6 +15,7 @@ if [ "$1" != render ]; then
   [ -f assets/dmp_vysky.json ] || { python dmp_fetch.py && python dmp_vysky.py; }          # výšky budov z laseru ČÚZK
   [ -f build/les_maska.png ] || python nastroje/les.py                                     # les podle ortofota
   [ -f assets/zabaged.json ] || { python nastroje/zabaged.py && python nastroje/pole.py; } # pole a louky
+  [ -f assets/hriste.json ] || python nastroje/hriste.py || true                          # dětská a workoutová hřiště z OSM
 fi
 rm -rf site/tiles && mkdir -p site/tiles && rm -f site/tiles.json
 ./render_par.sh                                               # scény, render a dlaždice: několik čtverců najednou podle paměti (./render_par.sh 1 = po jednom)
