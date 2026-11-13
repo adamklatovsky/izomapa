@@ -65,6 +65,27 @@ for f in sorted(glob.glob('data*/land_use.parquet')):
 AREA_TREE = shapely.STRtree([a[2] for a in AREAS]) if AREAS else None
 PL_TREE = shapely.STRtree([shapely.geometry.Point(p[0], p[1]) for p in PLACES_DB]) if PLACES_DB else None
 
+# pěší zóny pro lidi v prohlížeči (jen s "lide": true): ulice (class pedestrian, "l") a pěší plochy a náměstí z využití území ("a"), jen na čtvercích mapy
+PESI = []
+_na_mape = lambda x, y: any(abs(x - cx) <= HALF and abs(y - cy) <= HALF for cx, cy in map(chunk_center, CHUNKS))
+def _pesi_body(q):
+    lx, ly = to_local(q[:, 0], q[:, 1])
+    return [[round(float(a), 1), round(float(b), 1)] for a, b in zip(lx, ly)]
+if MESTO.get('lide') and os.path.exists('data_all/segment.parquet'):
+    for r in pq.read_table('data_all/segment.parquet', columns=['subtype', 'class', 'geometry']).to_pylist():
+        if r['subtype'] != 'road' or r['class'] != 'pedestrian': continue
+        g = shapely.from_wkb(r['geometry'])
+        if g.geom_type != 'LineString': continue
+        b_ = _pesi_body(np.array(g.coords))
+        if len(b_) >= 2 and _na_mape(*b_[len(b_) // 2]): PESI.append({'l': b_})
+if MESTO.get('lide') and os.path.exists('data_all/land_use.parquet'):
+    for c, g_ in zip(*[pq.read_table('data_all/land_use.parquet', columns=['class', 'geometry']).to_pandas()[k] for k in ('class', 'geometry')]):
+        if c not in ('pedestrian', 'plaza'): continue
+        g = shapely.from_wkb(g_)
+        for p_ in (g.geoms if g.geom_type == 'MultiPolygon' else [g] if g.geom_type == 'Polygon' else []):
+            b_ = _pesi_body(np.array(p_.exterior.coords))
+            if len(b_) >= 4 and _na_mape(*b_[0]): PESI.append({'a': b_})
+
 ONE_BUILDING = set(MESTO.get('jedna_budova', []))      # dominanty se zónami střech: v prepu samostatné díly, na mapě jedna budova
 
 
@@ -393,7 +414,7 @@ for a_n, b_n, n_ in TRAM_LINES:
                   'stops': [list(px(TSTOP[n][0], TSTOP[n][1], 0)[:2]) + [n] for n in st]})
     print('tramvaj', a_n, '–', b_n, round(sum(math.hypot(x1 - x0, y1 - y0) for (x0, y0), (x1, y1) in zip(on, on[1:]))), 'm', len(st), 'zastávek')
 json.dump({'w': W, 'h': H, 'cam': cam, 'districts': districts, 'needs': needs, 'xmas': nam, 'chunks': {CKEY[c]: CHUNKS[c] for c in chunks}, 'bus': bus_route, 'trams': trams, 'decks': decks,
-           'streets': streets, 'places': places, 'neighbors': neighbors},
+           'streets': streets, 'places': places, 'neighbors': neighbors, **({'pesi': PESI} if PESI else {})},
           open('site/overlay.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 json.dump(addr_index, open('site/search.json', 'w'), separators=(',', ':'), ensure_ascii=False)   # adresy pro hledání, načte se až při psaní
 print('čtverců', len(chunks), 'budov', sum(len(v['buildings']) for v in per_chunk.values()), 'adres', len(addr_index),

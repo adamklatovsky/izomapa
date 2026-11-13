@@ -73,6 +73,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'HLASENI': 'true' if M.get('hlaseni') else 'false',
         'VITR': 'true' if M.get('vitr') else 'false',
         'POCASI': 'true' if M.get('pocasi') else 'false',
+        'LIDE': 'true' if M.get('lide', False) else 'false',
         'LETADLA': 'true' if M.get('letadla', False) else 'false',
         'POHLED': json.dumps(pohled if isinstance(pohled, list) and len(pohled) >= 2 else None),
         'DOMU_CELEK': 'true' if M.get('domu_celek') else 'false',

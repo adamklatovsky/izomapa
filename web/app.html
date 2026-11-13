@@ -1323,6 +1323,144 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     const stopS = OV.bus.stops.map(([sx, sy]) => { let best = 0, bd = 1e18; r.p.forEach((p, i) => { const d = (p[0] - sx) ** 2 + (p[1] - sy) ** 2; if (d < bd) { bd = d; best = i; } }); return len[best]; });
     return { r, s: 0, dir: 1, v: 9, wait: 3, stopS };
   })();
+  // ---------- lidé v pěších zónách (overlay.json "pesi": ulice "l", plochy a náměstí "a"); chodí sami i ve dvojicích, občas se zastaví, v noci a v dešti jich je méně ----------
+  const LIDE = [], LIDC = ['#c8402f', '#2f5fa8', '#3c8a55', '#d8a635', '#7a4a8a', '#e9e6dc', '#4a4f5c', '#b85a2a', '#6f8fb3', '#d97a8c'];
+  const LIDK = ['#e8c4a0', '#dfb68f', '#c99a70'], LIDV = ['#2b211b', '#4a2f1b', '#7a5a34', '#b89a58', '#8d8d8d'], LIDN = ['#2e3a55', '#22252c', '#6f6a5c', '#3b4a6b', '#47403a'], LIDB = ['#7d3b2a', '#2f4f3a', '#39425e'];
+  const lidVyber = (a) => a[Math.floor(Math.random() * a.length)];
+  const lidMix = new Map();
+  function lidTon(hex, m, t) {                             // barva posunutá k barvě m o t (kvantované kvůli opakovanému kreslení)
+    const q = Math.round(t * 10), k = hex + m + q;
+    let v = lidMix.get(k);
+    if (!v) {
+      const A = [1, 3, 5].map((i) => parseInt(hex.substr(i, 2), 16)), B = [1, 3, 5].map((i) => parseInt(m.substr(i, 2), 16));
+      v = '#' + A.map((a, i) => Math.round(a + (B[i] - a) * q / 10).toString(16).padStart(2, '0')).join('');
+      lidMix.set(k, v);
+    }
+    return v;
+  }
+  const lidBod = (p) => { const b = p.A.bb; for (let k = 0; k < 25; k++) { const x = b[0] + Math.random() * (b[2] - b[0]), y = b[1] + Math.random() * (b[3] - b[1]); if (inPoly(x, y, p.A.a)) return [x, y]; } return [p.x, p.y]; };
+  function lidNovy(zaklad) {
+    const c = lidVyber(LIDC);
+    return { u: Math.random(), v: 1.05 + Math.random() * 0.5, c, c2: lidTon(c, '#10131a', 0.3), k: lidVyber(LIDK), va: lidVyber(LIDV), no: lidVyber(LIDN), sukne: Math.random() < 0.18, batoh: Math.random() < 0.22 ? lidVyber(LIDB) : null, vel: Math.random() < 0.08 ? 0.68 : 0.92 + Math.random() * 0.12, ph: Math.random() * 6.3, ot: 0, oc: false, wait: 0, fx: 1, fy: 0, x: 0, y: 0, ...zaklad };
+  }
+  function lidDvojice(v) {                                 // část lidí má vedle sebe společnost
+    if (LIDE.length > 700 || Math.random() > 0.3) return;
+    LIDE.push(lidNovy({ u: v.u, v: v.v, vodic: v, ox: 0.6 + Math.random() * 0.5, oy: (Math.random() - 0.5) * 0.9, R: v.R, A: v.A, x: v.x, y: v.y }));
+  }
+  for (const q of {{LIDE}} ? [...(OV.pesi || []).filter((v) => v.a), ...(OV.pesi || []).filter((v) => v.l)] : []) {   // nejdřív náměstí, jinak by limit vyčerpaly ulice
+    if (LIDE.length > 700) break;
+    if (q.a && LIDE.length > 420) continue;
+    if (q.l) {
+      const len = [0]; for (let i = 1; i < q.l.length; i++) len.push(len[i - 1] + Math.hypot(q.l[i][0] - q.l[i - 1][0], q.l[i][1] - q.l[i - 1][1]));
+      const L = len[len.length - 1], R = { w: q.l, len, L };
+      for (let j = 0, n = Math.min(40, Math.round(L / 8)); j < n; j++) { const p = lidNovy({ R, s: Math.random() * L, dir: Math.random() < 0.5 ? 1 : -1, bok: (Math.random() - 0.5) * 5.6 }); LIDE.push(p); lidDvojice(p); }
+    } else if (q.a) {
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, S = 0;
+      q.a.forEach((p, i) => { const n = q.a[(i + 1) % q.a.length]; x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); S += p[0] * n[1] - n[0] * p[1]; });
+      const A = { a: q.a, bb: [x0, y0, x1, y1] };
+      for (let j = 0, n = Math.min(60, Math.round(Math.abs(S) / 2 / 130)); j < n; j++) { const p = lidNovy({ A, x: x0, y: y0 }); [p.x, p.y] = lidBod(p); [p.tx, p.ty] = lidBod(p); LIDE.push(p); lidDvojice(p); }
+    }
+  }
+  function lidKresli(p, X, Y, sx, jde, night, now) {       // postava zblízka: nohy, trup, paže, hlava, vlasy; X, Y = chodidla na obrazovce
+    const a = night > 0.3 ? Math.min(1, (night - 0.3) / 0.4) : 0, t = 0.28 * a, C = (h) => (t ? lidTon(h, '#1a2040', t) : h);
+    const h = sx * 8.6 * p.vel, w = h * 0.3, nohy = h * 0.44, trup = h * 0.34, hl = h * 0.17, R = (x, y, wd, ht) => ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(wd)), Math.max(1, Math.round(ht)));
+    const fi = jde ? now * p.v / 215 + p.ph : 0, krok = Math.sin(fi), bok = Math.abs(p.fx) > Math.abs(p.fy) * 0.7, pryc = !bok && p.fy < 0, smer = p.fx >= 0 ? 1 : -1;
+    const bob = jde ? -Math.abs(Math.cos(fi)) * h * 0.02 : 0, kycle = Y - nohy + bob, rame = kycle - trup, temeno = rame - hl, ln = w * 0.38, boty = Math.max(1, h * 0.05), pw = w * 0.2;
+    const stup = Math.max(1, Math.round(sx * 0.55));
+    const sikmo = (x0, y0, x1, y1, sirka, barva) => {      // šikmá končetina po schodech, jako pixel art
+      ctx.fillStyle = C(barva);
+      const n = Math.max(1, Math.round((y1 - y0) / stup));
+      for (let i = 0; i < n; i++) R(x0 + (x1 - x0) * (i + 0.5) / n - sirka / 2, y0 + (y1 - y0) * i / n, sirka, (y1 - y0) / n + 0.6);
+    };
+    ctx.globalAlpha = 0.26; ctx.fillStyle = '#10131a'; ctx.beginPath(); ctx.ellipse(X - h * 0.2, Y, h * 0.34, Math.max(1, h * 0.08), 0, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1;
+    if (bok) {
+      const w2 = w * 0.74, S = h * 0.19, A = h * 0.13, nz = p.sukne ? p.k : p.no;
+      const noha = (f, barva) => {                         // f: poloha nohy; dopředu jde ve vzduchu (cos > 0), zpátky po zemi
+        const fx = X + Math.sin(f) * S * smer, zv = Math.max(0, Math.cos(f)) * h * 0.07;
+        sikmo(X, kycle, fx, Y - zv - boty, ln, barva);
+        ctx.fillStyle = C('#1b1c22'); R(smer > 0 ? fx - ln / 2 : fx - ln * 0.95, Y - zv - boty, ln * 1.45, boty);
+      };
+      const paze = (f, barva) => {
+        const hx = X + Math.sin(f) * A * smer, y1 = rame + trup * 0.86;
+        sikmo(X, rame + h * 0.01, hx, y1, pw, barva);
+        ctx.fillStyle = C(p.k); R(hx - pw / 2, y1, pw, Math.max(1, h * 0.05));
+      };
+      noha(fi + Math.PI, lidTon(nz, '#10131a', 0.3));
+      noha(fi, nz);
+      paze(fi, lidTon(p.c2, '#10131a', 0.25));             // vzdálenější paže jde proti vzdálenější noze
+      if (p.batoh) { ctx.fillStyle = C(p.batoh); R(X - smer * (w2 / 2 + w * 0.2) - w * 0.22, rame + trup * 0.08, w * 0.44, trup * 0.68); }
+      ctx.fillStyle = C(p.c); R(X - w2 / 2, rame, w2, trup + h * 0.02);
+      ctx.fillStyle = C(p.c2); R(smer > 0 ? X - w2 / 2 : X + w2 * 0.2, rame, w2 * 0.3, trup + h * 0.02);
+      if (p.sukne) { ctx.fillStyle = C(p.c); R(X - w2 * 0.68, kycle, w2 * 1.36, nohy * 0.5); }
+      paze(fi + Math.PI, p.c2);
+    } else {
+      const noha = (x, zdvih) => {
+        ctx.fillStyle = C(p.sukne ? p.k : p.no); R(x, kycle, ln, nohy - bob - zdvih - boty);
+        ctx.fillStyle = C('#1b1c22'); R(x, Y - zdvih - boty, ln, boty);
+      };
+      const d = h * 0.05; noha(X - w * 0.42, krok > 0 ? d * krok : 0); noha(X + w * 0.04, krok < 0 ? -d * krok : 0);
+      ctx.fillStyle = C(p.c); R(X - w / 2, rame, w, trup + h * 0.02);
+      ctx.fillStyle = C(p.c2); R(X + w * 0.17, rame, w * 0.33, trup + h * 0.02);
+      if (p.sukne) { ctx.fillStyle = C(p.c); R(X - w * 0.62, kycle, w * 1.24, nohy * 0.5); ctx.fillStyle = C(p.c2); R(X + w * 0.2, kycle, w * 0.42, nohy * 0.5); }
+      if (p.batoh && pryc) { ctx.fillStyle = C(p.batoh); R(X - w * 0.38, rame + trup * 0.08, w * 0.76, trup * 0.7); }
+      const paze = (x, y0) => { ctx.fillStyle = C(p.c2); R(x, y0, pw, trup * 0.86); ctx.fillStyle = C(p.k); R(x, y0 + trup * 0.86, pw, Math.max(1, h * 0.05)); };
+      paze(X - w / 2 - pw * 0.75, rame + h * 0.01 + Math.max(0, krok) * h * 0.02); paze(X + w / 2 - pw * 0.25, rame + h * 0.01 + Math.max(0, -krok) * h * 0.02);
+    }
+    const hw = h * 0.21, hx = X - hw / 2 + (bok ? smer * h * 0.015 : 0);
+    ctx.fillStyle = C(p.k); R(X - hw * 0.28, rame - h * 0.02, hw * 0.56, h * 0.04);
+    R(hx, temeno, hw, hl);
+    ctx.fillStyle = C(p.va);
+    if (pryc) R(hx, temeno, hw, hl * 0.9);
+    else { R(hx, temeno, hw, hl * 0.42); if (bok) R(smer > 0 ? hx : hx + hw * 0.55, temeno, hw * 0.45, hl * 0.75); }
+  }
+  function lidZakryt(ix, iy, d) {                          // za budovou nebo uvnitř jejího půdorysu (pěší čára skrz pasáž): nekreslit, jinak by člověk stál na zdi
+    for (const b of grid.get(Math.floor(ix / CELL) + ',' + Math.floor(iy / CELL)) || [])
+      if (shown(b.k) && b.d < d + 6 && ix >= b.bb[0] && ix <= b.bb[2] && iy >= b.bb[1] && iy <= b.bb[3] && inPoly(ix, iy, b.hull)) return true;
+    return false;
+  }
+  function drawLide(dt, sx, ox, oy, night, now, vis) {
+    if (sx < 0.28 || !LIDE.length) return;
+    const podil = (night > 0.75 ? 0.25 : night > 0.3 ? 0.75 : 1) * (state.weather === 'rain' ? 0.35 : state.weather === 'snow' ? 0.6 : 1), items = [];
+    for (const p of LIDE) {
+      if (p.u > podil) continue;
+      let x, y, jde = false;
+      if (p.vodic) {                                       // jde vedle svého společníka
+        const v = p.vodic, a = Math.atan2(v.fyw || 0, v.fxw || 1), tx = v.x + Math.cos(a + 1.57) * p.ox + Math.cos(a) * p.oy, ty = v.y + Math.sin(a + 1.57) * p.ox + Math.sin(a) * p.oy;
+        const d = Math.hypot(tx - p.x, ty - p.y), kr = Math.min(d, p.v * 1.6 * dt);
+        if (d > 0.08) { p.x += (tx - p.x) / d * kr; p.y += (ty - p.y) / d * kr; }
+        jde = !v.wait && d > 0.02 || d > 0.4; x = p.x; y = p.y;
+        p.fxw = v.fxw; p.fyw = v.fyw;
+      } else if (p.R) {
+        if (p.wait > 0) p.wait -= dt;
+        else if (Math.random() < dt * 0.012) p.wait = 3 + Math.random() * 12;
+        else { p.s += p.v * dt * p.dir; jde = true; if (p.s < 0 || p.s > p.R.L) { p.dir *= -1; p.s = Math.max(0, Math.min(p.R.L, p.s)); } }
+        const L = p.R.len; let i = 1; while (i < L.length - 1 && L[i] < p.s) i++;
+        const a = p.R.w[i - 1], b = p.R.w[i], f = (p.s - L[i - 1]) / ((L[i] - L[i - 1]) || 1), ln = (L[i] - L[i - 1]) || 1, ux = (b[0] - a[0]) / ln, uy = (b[1] - a[1]) / ln, bk = p.bok + Math.sin(p.s * 0.13 + p.ph) * 1.1;
+        x = a[0] + (b[0] - a[0]) * f + uy * bk; y = a[1] + (b[1] - a[1]) * f - ux * bk; p.x = x; p.y = y; p.fxw = ux * p.dir; p.fyw = uy * p.dir;
+      } else {
+        if (p.wait > 0) p.wait -= dt;
+        else { const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d < 1) { [p.tx, p.ty] = lidBod(p); p.wait = Math.random() < 0.45 ? 2 + Math.random() * 14 : 0; } else { p.x += dx / d * p.v * dt; p.y += dy / d * p.v * dt; p.fxw = dx / d; p.fyw = dy / d; jde = true; } }
+        x = p.x; y = p.y;
+      }
+      const z = gz(x, y), [ix, iy] = toImg(x, y, z);
+      if (!vis(ix, iy, 30)) continue;
+      if (p.lx !== undefined) { const mx = ix - p.lx, my = iy - p.ly; if (Math.abs(mx) + Math.abs(my) > 0.02) { p.fx += (mx - p.fx) * 0.2; p.fy += (my - p.fy) * 0.2; } }
+      p.lx = ix; p.ly = iy;
+      if (!(now < p.ot)) { p.ot = now + 400; p.oc = lidZakryt(ix, iy, depth(x, y, z)); }
+      if (!p.oc) items.push([iy, ix, p, jde]);
+    }
+    items.sort((a, b) => a[0] - b[0]);
+    const w = Math.max(1, Math.round(sx * 2.4)), h = Math.max(3, Math.round(sx * 8.5));
+    for (const [iy, ix, p, jde] of items) {
+      const X_ = ox + ix * sx, Y_ = oy + iy * sx;
+      if (sx >= 0.6) { lidKresli(p, X_, Y_, sx, jde, night, now); continue; }
+      const Xi = Math.round(X_ - w / 2), Yi = Math.round(Y_);                 // zdálky stačí tečka s hlavou
+      ctx.globalAlpha = 0.28; ctx.fillStyle = '#10131a'; ctx.fillRect(Xi - 1, Yi - 1, w + 2, Math.max(1, Math.round(sx)));
+      ctx.globalAlpha = 1; ctx.fillStyle = p.no; ctx.fillRect(Xi, Yi - Math.round(h * 0.42), w, Math.round(h * 0.42));
+      ctx.fillStyle = p.c; ctx.fillRect(Xi, Yi - Math.round(h * 0.82), w, Math.round(h * 0.42));
+      ctx.fillStyle = p.k; ctx.fillRect(Xi, Yi - h, w, Math.max(1, Math.round(h * 0.2)));
+    }
+  }
   // tramvaje: linky z overlay.json, na každé několik souprav (dva články), jezdí tam a zpět a stojí v zastávkách
   const trams = (OV.trams || []).flatMap((t) => {
     const w = t.w, len = [0]; for (let i = 1; i < w.length; i++) len.push(len[i - 1] + Math.hypot(w[i][0] - w[i - 1][0], w[i][1] - w[i - 1][1]));
@@ -2474,6 +2612,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       b.hull.forEach(([x, y], i) => (i ? ctx.lineTo(ox + x * sx, oy + y * sx) : ctx.moveTo(ox + x * sx, oy + y * sx)));
       ctx.closePath(); ctx.stroke();
     }
+    if ($('l-traffic').checked) drawLide(dt, sx, ox, oy, night, now, vis);
     // doprava
     if ($('l-traffic').checked) {
       if (now - tShareT > 5000 || tShareCount !== cars.length || tShareSlow !== (eco || SLOW)) {
