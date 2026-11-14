@@ -37,7 +37,8 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
 4. **Stavba:** `./postav.sh` (spouštěj na pozadí, běží dlouho). Kroky, které už mají výsledek, přeskakuje.
 5. **Kontrola:** `python compose.py summer 8` udělá `build/nahled_summer.png`. Prohlédni si ho (švy mezi čtverci,
    prázdná místa, divné barvy) a pošli uživateli. Pak `npm run nahled` a mapa běží na http://localhost:8000.
-6. **Doladění s uživatelem** (níže). Po každé úpravě: `./postav.sh render` (jen scény, render a web).
+6. **Doladění s uživatelem** (níže). Po každé úpravě: `./postav.sh render` (jen scény, render a web). Kreslí jen čtverce, kde se
+   změnila scéna nebo kód renderu (otisk v `build/…/otisk_renderu`, `nastroje/otisk.py`), ostatní přeskočí. Vše znovu: smaž `site/tiles`.
    Render běží souběžně po několika čtvercích (`render_par.sh`, počet podle paměti: na čtverec ~4 GB a 3 jádra, nejvýš 4). Na slabším počítači nebo při potížích `./render_par.sh 1` = po jednom; jen vybrané čtverce `./render_par.sh 2 "0,0 1,0"`.
 7. **Řekni uživateli na rovinu**, že mapu musí projít a porovnat se skutečností (data i ty se můžete mýlit),
    hlavně fakta v příbězích míst, než ji zveřejní. Kredit „Vytvořeno nástrojem izomapa od Adama Klatovského“
