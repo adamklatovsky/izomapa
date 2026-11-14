@@ -1099,7 +1099,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   const fx = $('fx'), ctx = fx.getContext('2d');
   viewer.canvas.insertBefore(fx, viewer.canvas.lastChild);           // mezi dlaždice a popisky: vozidla nepřekryjí názvy míst
   const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-  const DISTRICTS = (OV.districts || []).slice().sort((p, q) => q.a - p.a);
+  const DISTRICTS = (OV.districts || []).slice().sort((p, q) => (q.k === 'obec') - (p.k === 'obec') || q.a - p.a);   // obce před místními částmi
   const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue('--display').trim() || 'monospace';
   const sid = (str) => { let h = 7; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h) % 1000003; };
   const occluded = (ix, iy, d) => {
@@ -2632,9 +2632,9 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
         for (const d of DISTRICTS) {                      // od největší čtvrti; překrývající se menší popisek vynechat
           const x = ox + d.xy[0] * sx, y = oy + d.xy[1] * sx;
           if (x < -200 || y < -60 || x > cw + 200 || y > ch + 60) continue;
-          const big = d.a > 3 ? 1 : 0.82;
-          ctx.font = `500 ${Math.round(15 * big)}px ${DISPLAY_FONT}`;
-          const tw = ctx.measureText(d.name.toUpperCase()).width / 2 + 6, th = 11;
+          const big = d.k === 'obec' ? 1.15 : d.k === 'cast' ? 0.72 : d.a > 3 ? 1 : 0.82;   // obec větší, místní část menší
+          ctx.font = `${d.k === 'obec' ? 700 : 500} ${Math.round(15 * big)}px ${DISPLAY_FONT}`;
+          const tw = ctx.measureText(d.name.toUpperCase()).width / 2 + 6, th = 11 * big;
           if (boxes.some(([bx, by, bw]) => Math.abs(bx - x) < bw + tw && Math.abs(by - y) < th * 2)) continue;
           boxes.push([x, y, tw]);
           ctx.globalAlpha = fadeD * 0.9;
