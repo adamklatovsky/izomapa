@@ -99,7 +99,16 @@ def build_overlay(ctx: dict[str, Any]) -> dict[str, Any] | bool:
         out_path = Path(cfg.get('server_data_out') or (ctx['server_data_dir'] / f'{plugin_id}.targets.json'))
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(
-            json.dumps({'plugin_id': plugin_id, 'title': raw.get('title', plugin_id), 'levels': secret_levels}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {
+                    'plugin_id': plugin_id,
+                    'title': raw.get('title', plugin_id),
+                    'profanity_filter': bool(cfg.get('profanity_filter', True)),
+                    'levels': secret_levels,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding='utf-8',
         )
 

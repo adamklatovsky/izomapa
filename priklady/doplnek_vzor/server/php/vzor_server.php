@@ -21,6 +21,96 @@ function vzor_clip(string $s, int $max): string {
     return function_exists('mb_substr') ? mb_substr($s, 0, $max, 'UTF-8') : substr($s, 0, $max);
 }
 
+function vzor_strip_accents(string $s): string {
+    static $map = [
+        'Á'=>'a','Ä'=>'a','Č'=>'c','Ď'=>'d','É'=>'e','Ě'=>'e','Ë'=>'e','Í'=>'i','Ň'=>'n','Ó'=>'o','Ö'=>'o','Ř'=>'r','Š'=>'s','Ť'=>'t','Ú'=>'u','Ů'=>'u','Ü'=>'u','Ý'=>'y','Ž'=>'z',
+        'á'=>'a','ä'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','ë'=>'e','í'=>'i','ň'=>'n','ó'=>'o','ö'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ü'=>'u','ý'=>'y','ž'=>'z',
+    ];
+    $s = strtr($s, $map);
+    return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+}
+
+function vzor_default_profanity(): array {
+    return [
+        'enabled' => true,
+        'exact_words' => [
+            'vul','vole','blb','blbc','blbce','blbec','blbci','blbco','blbecek',
+            'pica','pico','picu','pice','picus','picov','picovat',
+            'kunda','kundy','kundu','kundo','kundic','kundicka',
+            'srac','debil','debilni','debile','kreten','kretene','idiot','idiote',
+            'hajzl','hajzle','chuj','chuje','buzna','buzny','krypl','magor',
+            'nazi','neonazi','hitler','heil',
+            'ass','cock','cocks','dick','dicks','cunt','slut','whore','twat','wank','wanker','prick',
+        ],
+        'prefixes' => [
+            'kurv','zkurv','vykurv','kurev','curak','curac','kokot',
+            'zmrd','mrda','mrdam','mrdat','mrdal','mrdk','mrdn','omrd','vymrd','domrd',
+            'jebat','jebu','jebe','jebal','jebn','zjeb','vyjeb','ojeb','pojeb',
+            'prdel','srack','srat','posr','nasr','vysr','zasr',
+            'sukat','sukam','sukas','vysuk','zasuk','osuk','devk','stetk','buzer','teplous',
+            'fuck','shit','bitch','asshole','dickhead','motherfuck','bullshit','retard','nigger','faggot',
+        ],
+        'compact_phrases' => ['kurv','curak','kokot','zmrd','prdel','srack','buzerant','hitler','fuck','nigger','faggot'],
+        'allow_words' => [],
+    ];
+}
+
+function vzor_load_profanity_rules(?string $targetsFile = null): array {
+    if ($targetsFile !== null && $targetsFile !== '') {
+        $pf = dirname($targetsFile) . '/profanity.json';
+        if (is_file($pf)) {
+            $parsed = json_decode((string)file_get_contents($pf), true);
+            if (is_array($parsed)) return $parsed;
+        }
+    }
+    return vzor_default_profanity();
+}
+
+function vzor_contains_profanity(string $text, ?array $rules = null, bool $enabled = true): bool {
+    if (!$enabled) return false;
+    $src = $rules ?? vzor_default_profanity();
+    if (($src['enabled'] ?? true) === false) return false;
+    $allow = array_flip(array_map('vzor_strip_accents', $src['allow_words'] ?? []));
+    $exact = [];
+    foreach ($src['exact_words'] ?? [] as $w) {
+        $nw = vzor_strip_accents((string)$w);
+        if ($nw !== '' && !isset($allow[$nw])) $exact[$nw] = true;
+    }
+    $prefixes = [];
+    foreach ($src['prefixes'] ?? [] as $p) {
+        $np = vzor_strip_accents((string)$p);
+        if ($np !== '' && !isset($allow[$np])) $prefixes[] = $np;
+    }
+    $compactPhrases = array_values(array_filter(array_map('vzor_strip_accents', $src['compact_phrases'] ?? [])));
+
+    $leetMap = ['0'=>'o','1'=>'i','3'=>'e','4'=>'a','5'=>'s','7'=>'t','@'=>'a','$'=>'s','!'=>'i'];
+    foreach ([false, true] as $leet) {
+        $norm = vzor_strip_accents($text);
+        if ($leet) $norm = strtr($norm, $leetMap);
+        $merged = preg_replace_callback('/(?<![a-z0-9])(?:[a-z0-9][\s._*+-]+){2,}[a-z0-9](?![a-z0-9])/', static fn($m) => preg_replace('/[^a-z0-9]/', '', $m[0]), $norm);
+        preg_match_all('/[a-z0-9]+/', $merged ?? $norm, $matches);
+        foreach ($matches[0] as $tok) {
+            if (isset($allow[$tok])) continue;
+            $collapsed = preg_replace('/(.)\1+/', '$1', $tok) ?? $tok;
+            foreach ([$tok, $collapsed] as $cand) {
+                if (isset($allow[$cand])) continue;
+                if (isset($exact[$cand])) return true;
+                foreach ($prefixes as $pref) {
+                    if (str_starts_with($cand, $pref)) return true;
+                }
+            }
+        }
+        $compact = preg_replace('/[^a-z0-9]+/', '', $norm) ?? '';
+        $compactCollapsed = preg_replace('/(.)\1+/', '$1', $compact) ?? $compact;
+        foreach ([$compact, $compactCollapsed] as $cc) {
+            foreach ($compactPhrases as $phrase) {
+                if ($phrase !== '' && str_contains($cc, $phrase)) return true;
+            }
+        }
+    }
+    return false;
+}
+
 function vzor_b64url_encode(string $raw): string {
     return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
 }
@@ -136,26 +226,30 @@ function vzor_store_insert(PDO|string $store, array $entry): int {
     return $faster + 1;
 }
 
-function vzor_store_leaderboard(PDO|string $store): array {
+function vzor_store_leaderboard(PDO|string $store, ?array $profanityRules = null, bool $profanityEnabled = true): array {
     if ($store instanceof PDO) {
-        return $store->query('SELECT nickname, total_time_ms AS totalTimeMs, difficulty, season, certificate_id AS certificateId, created_at AS createdAt FROM scores ORDER BY total_time_ms ASC, created_at ASC LIMIT 20')->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $store->query('SELECT nickname, total_time_ms AS totalTimeMs, difficulty, season, certificate_id AS certificateId, created_at AS createdAt FROM scores ORDER BY total_time_ms ASC, created_at ASC LIMIT 50')->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        if (!is_file($store)) return [];
+        $rows = json_decode((string)file_get_contents($store), true) ?: [];
+        usort($rows, static fn($a, $b) => ((int)$a['totalTimeMs'] <=> (int)$b['totalTimeMs']) ?: strcmp((string)$a['createdAt'], (string)$b['createdAt']));
+        $rows = array_map(static fn($r) => [
+            'nickname'      => $r['nickname'],
+            'totalTimeMs'   => $r['totalTimeMs'],
+            'difficulty'    => $r['difficulty'],
+            'season'        => $r['season'],
+            'certificateId' => $r['certificateId'],
+            'createdAt'     => $r['createdAt'],
+        ], array_slice($rows, 0, 50));
     }
-    if (!is_file($store)) return [];
-    $rows = json_decode((string)file_get_contents($store), true) ?: [];
-    usort($rows, static fn($a, $b) => ((int)$a['totalTimeMs'] <=> (int)$b['totalTimeMs']) ?: strcmp((string)$a['createdAt'], (string)$b['createdAt']));
-    return array_map(static fn($r) => [
-        'nickname'      => $r['nickname'],
-        'totalTimeMs'   => $r['totalTimeMs'],
-        'difficulty'    => $r['difficulty'],
-        'season'        => $r['season'],
-        'certificateId' => $r['certificateId'],
-        'createdAt'     => $r['createdAt'],
-    ], array_slice($rows, 0, 20));
+    $clean = array_values(array_filter($rows, static fn($r) => !vzor_contains_profanity((string)($r['nickname'] ?? ''), $profanityRules, $profanityEnabled)));
+    return array_slice($clean, 0, 10);
 }
 
-function vzor_handle_request(array $data, array $targetsData, PDO|string $dbPathOrPdo, string $secretKey, string $clientIp, ?int $nowMs = null): array {
+function vzor_handle_request(array $data, array $targetsData, PDO|string $dbPathOrPdo, string $secretKey, string $clientIp, ?int $nowMs = null, ?array $profanityRules = null): array {
     $ts = $nowMs ?? (int)round(microtime(true) * 1000);
     $action = (string)($data['action'] ?? '');
+    $profanityEnabled = (bool)($targetsData['profanity_filter'] ?? true);
 
     $findLevel = static function ($lvlId) use ($targetsData): ?array {
         foreach ($targetsData['levels'] ?? [] as $lvl) {
@@ -254,6 +348,9 @@ function vzor_handle_request(array $data, array $targetsData, PDO|string $dbPath
         $nickname = trim((string)($data['nickname'] ?? ''));
         if ($nickname === '') $nickname = 'Anonymní hledač';
         $nickname = vzor_clip($nickname, 50);
+        if (vzor_contains_profanity($nickname, $profanityRules, $profanityEnabled)) {
+            return [400, ['error' => 'profanity_nickname', 'message' => 'Přezdívka obsahuje nevhodný výraz. Zadejte prosím jinou přezdívku.']];
+        }
         $auditHash = vzor_audit_hash($clientIp, $secretKey, intdiv($ts, 1000));
         $certId = strtoupper(substr(hash_hmac('sha256', "{$nickname}:{$totalMs}:{$auditHash}:{$ts}", $secretKey), 0, 6));
 
@@ -271,7 +368,7 @@ function vzor_handle_request(array $data, array $targetsData, PDO|string $dbPath
     }
 
     if ($action === 'leaderboard') {
-        return [200, ['entries' => vzor_store_leaderboard($store)]];
+        return [200, ['entries' => vzor_store_leaderboard($store, $profanityRules, $profanityEnabled)]];
     }
 
     return [400, ['error' => 'unknown_action', 'message' => 'Neznámá akce']];
@@ -297,12 +394,13 @@ if (PHP_SAPI !== 'cli' || realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE
     if (!is_dir(dirname($dbPath))) @mkdir(dirname($dbPath), 0775, true);
 
     $targetsData = json_decode((string)file_get_contents($targetsFile), true);
+    $profanityRules = vzor_load_profanity_rules($targetsFile);
     $method = $_SERVER['REQUEST_METHOD'] ?? (PHP_SAPI === 'cli' ? 'POST' : 'GET');
     $input = ($method === 'GET')
         ? ['action' => $_GET['action'] ?? 'leaderboard']
         : (json_decode((string)file_get_contents(PHP_SAPI === 'cli' ? 'php://stdin' : 'php://input'), true) ?: []);
 
-    [$code, $resp] = vzor_handle_request($input, $targetsData, $dbPath, $secretKey, vzor_client_ip());
+    [$code, $resp] = vzor_handle_request($input, $targetsData, $dbPath, $secretKey, vzor_client_ip(), null, $profanityRules);
     if (PHP_SAPI !== 'cli') http_response_code($code);
     echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 }

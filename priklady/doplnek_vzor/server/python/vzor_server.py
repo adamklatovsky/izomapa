@@ -8,12 +8,84 @@ import hmac
 import json
 import math
 import random
+import re
 import sqlite3
 import time
+import unicodedata
+from pathlib import Path
 from typing import Any
 
 
 RATE_LIMIT_MS = 300
+_LEET_MAP = str.maketrans({'0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i'})
+_DEFAULT_PROFANITY = {
+    'enabled': True,
+    'exact_words': [
+        'vul', 'vole', 'blb', 'blbc', 'blbce', 'blbec', 'blbci', 'blbco', 'blbecek',
+        'pica', 'pico', 'picu', 'pice', 'picus', 'picov', 'picovat',
+        'kunda', 'kundy', 'kundu', 'kundo', 'kundic', 'kundicka',
+        'srac', 'debil', 'debilni', 'debile', 'kreten', 'kretene', 'idiot', 'idiote',
+        'hajzl', 'hajzle', 'chuj', 'chuje', 'buzna', 'buzny', 'krypl', 'magor',
+        'nazi', 'neonazi', 'hitler', 'heil',
+        'ass', 'cock', 'cocks', 'dick', 'dicks', 'cunt', 'slut', 'whore', 'twat', 'wank', 'wanker', 'prick',
+    ],
+    'prefixes': [
+        'kurv', 'zkurv', 'vykurv', 'kurev', 'curak', 'curac', 'kokot',
+        'zmrd', 'mrda', 'mrdam', 'mrdat', 'mrdal', 'mrdk', 'mrdn', 'omrd', 'vymrd', 'domrd',
+        'jebat', 'jebu', 'jebe', 'jebal', 'jebn', 'zjeb', 'vyjeb', 'ojeb', 'pojeb',
+        'prdel', 'srack', 'srat', 'posr', 'nasr', 'vysr', 'zasr',
+        'sukat', 'sukam', 'sukas', 'vysuk', 'zasuk', 'osuk', 'devk', 'stetk', 'buzer', 'teplous',
+        'fuck', 'shit', 'bitch', 'asshole', 'dickhead', 'motherfuck', 'bullshit', 'retard', 'nigger', 'faggot',
+    ],
+    'compact_phrases': ['kurv', 'curak', 'kokot', 'zmrd', 'prdel', 'srack', 'buzerant', 'hitler', 'fuck', 'nigger', 'faggot'],
+    'allow_words': [],
+}
+
+
+def _strip_accents(text: str) -> str:
+    return ''.join(ch for ch in unicodedata.normalize('NFKD', text) if not unicodedata.combining(ch))
+
+
+def contains_profanity(text: str, rules: dict[str, Any] | None = None, enabled: bool = True) -> bool:
+    """Zkontroluje, zda přezdívka obsahuje nevhodný/sprostý výraz (výchozí zapnuto)."""
+    if not enabled:
+        return False
+    src = rules or _DEFAULT_PROFANITY
+    if src.get('enabled') is False:
+        return False
+    allow = {_strip_accents(str(w).lower()) for w in (src.get('allow_words') or [])}
+    exact = {_strip_accents(str(w).lower()) for w in (src.get('exact_words') or [])} - allow
+    prefixes = tuple(_strip_accents(str(w).lower()) for w in (src.get('prefixes') or []) if _strip_accents(str(w).lower()) not in allow)
+    compact_phrases = tuple(_strip_accents(str(w).lower()) for w in (src.get('compact_phrases') or []))
+
+    for leet in (False, True):
+        norm = _strip_accents(str(text or '').lower())
+        if leet:
+            norm = norm.translate(_LEET_MAP)
+        merged = re.sub(r'(?<![a-z0-9])(?:[a-z0-9][\s._*+-]+){2,}[a-z0-9](?![a-z0-9])', lambda m: re.sub(r'[^a-z0-9]', '', m.group(0)), norm)
+        for tok in re.findall(r'[a-z0-9]+', merged):
+            if tok in allow:
+                continue
+            collapsed = re.sub(r'(.)\1+', r'\1', tok)
+            for cand in (tok, collapsed):
+                if cand in allow:
+                    continue
+                if cand in exact or (prefixes and cand.startswith(prefixes)):
+                    return True
+        compact = re.sub(r'[^a-z0-9]+', '', norm)
+        for cand_compact in (compact, re.sub(r'(.)\1+', r'\1', compact)):
+            if any(phrase in cand_compact for phrase in compact_phrases):
+                return True
+    return False
+
+
+def load_profanity_rules(targets_file: str | Path | None = None) -> dict[str, Any]:
+    """Načte profanity.json ze složky server_data vedle targets.json, jinak vrátí výchozí slovník."""
+    if targets_file:
+        pf = Path(targets_file).resolve().with_name('profanity.json')
+        if pf.is_file():
+            return json.loads(pf.read_text(encoding='utf-8'))
+    return dict(_DEFAULT_PROFANITY)
 
 
 def b64url_encode(raw: bytes) -> str:
@@ -123,11 +195,13 @@ def handle_action(
     secret_key: str,
     client_ip: str = '127.0.0.1',
     now_ms: int | None = None,
+    profanity_rules: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
     """Zpracuje jednu ze 4 akcí (start, verify, finish, leaderboard)."""
     init_db(conn)
     action = str(data.get('action') or '')
     ts = int(time.time() * 1000) if now_ms is None else int(now_ms)
+    profanity_enabled = bool(targets_data.get('profanity_filter', True))
 
     if action == 'start':
         lvl = _find_level(targets_data, data.get('levelId'))
@@ -225,6 +299,11 @@ def handle_action(
         total_ms = sum(max(1, int(p.get('el', 0))) for p in verified.values())
         last_p = verified[required_lvls[-1]]
         nickname = (str(data.get('nickname') or '').strip() or 'Anonymní hledač')[:50]
+        if contains_profanity(nickname, profanity_rules, enabled=profanity_enabled):
+            return 400, {
+                'error': 'profanity_nickname',
+                'message': 'Přezdívka obsahuje nevhodný výraz. Zadejte prosím jinou přezdívku.',
+            }
         audit_hash = compute_audit_hash(client_ip, secret_key)
         cert_seed = f'{nickname}:{total_ms}:{audit_hash}:{ts}'
         cert_id = hmac.new(secret_key.encode('utf-8'), cert_seed.encode('utf-8'), hashlib.sha256).hexdigest()[:6].upper()
@@ -245,20 +324,20 @@ def handle_action(
 
     if action == 'leaderboard':
         rows = conn.execute(
-            'SELECT nickname, total_time_ms, difficulty, season, certificate_id, created_at FROM scores ORDER BY total_time_ms ASC, created_at ASC LIMIT 20'
+            'SELECT nickname, total_time_ms, difficulty, season, certificate_id, created_at FROM scores ORDER BY total_time_ms ASC, created_at ASC LIMIT 50'
         ).fetchall()
-        return 200, {
-            'entries': [
-                {
-                    'nickname': r[0],
-                    'totalTimeMs': r[1],
-                    'difficulty': r[2],
-                    'season': r[3],
-                    'certificateId': r[4],
-                    'createdAt': r[5],
-                }
-                for r in rows
-            ]
-        }
+        entries = [
+            {
+                'nickname': r[0],
+                'totalTimeMs': r[1],
+                'difficulty': r[2],
+                'season': r[3],
+                'certificateId': r[4],
+                'createdAt': r[5],
+            }
+            for r in rows
+            if not contains_profanity(r[0], profanity_rules, enabled=profanity_enabled)
+        ][:10]
+        return 200, {'entries': entries}
 
     return 400, {'error': 'unknown_action', 'message': 'Neznámá akce'}

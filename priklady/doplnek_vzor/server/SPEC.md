@@ -81,6 +81,10 @@ Výstup:
 ```json
 { "saved": true, "totalTimeMs": 45200, "rank": 3, "certificateId": "A9F3C1" }
 ```
+Pokud je zapnutý filtr sprostých slov (`"profanity_filter": true`, výchozí nastavení v `plugins.py` a `targets.json`) a přezdívka obsahuje nevhodný výraz, backend zápis odmítne s HTTP `400`:
+```json
+{ "error": "profanity_nickname", "message": "Přezdívka obsahuje nevhodný výraz. Zadejte prosím jinou přezdívku." }
+```
 
 ### `leaderboard`
 Vstup:

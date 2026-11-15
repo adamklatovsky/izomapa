@@ -389,6 +389,69 @@ class TestPluginsCore(unittest.TestCase):
                 audit_hash = stored[0]['auditHash']
             self.assertEqual(len(audit_hash), 12)
 
+            # Sprostá přezdívka přes PHP CLI musí být odmítnuta
+            bad_nick_php = call_php({'action': 'finish', 'nickname': 'Píča_123', 'tickets': [ticket]})
+            self.assertEqual(bad_nick_php.get('error'), 'profanity_nickname')
+
+    def test_profanity_filter_default_enabled_and_configurable(self):
+        self.assertTrue(plugins.contains_profanity('Kurva123'))
+        self.assertTrue(plugins.contains_profanity('p.i.č.a'))
+        self.assertTrue(plugins.contains_profanity('p1c4'))
+        self.assertTrue(plugins.contains_profanity('kokotina'))
+        self.assertFalse(plugins.contains_profanity('Sekunda'))
+        self.assertFalse(plugins.contains_profanity('Srnka z Teplic'))
+        self.assertFalse(plugins.contains_profanity('Anonymní hledač'))
+        self.assertFalse(plugins.contains_profanity('Kurva123', {'profanity_filter': False}))
+
+        vzor = _load_vzor_server()
+        secret = 'profanity_secret_key'
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            assets = tmp / 'assets'
+            site = tmp / 'site'
+            build = tmp / 'build'
+            server_root = tmp / 'site_server'
+            plugins_dir = tmp / 'doplnky'
+            vzor_dir = plugins_dir / 'vzor_doplnku'
+            assets.mkdir()
+            vzor_dir.mkdir(parents=True)
+            shutil.copytree(ROOT / 'priklady/doplnek_vzor', vzor_dir, dirs_exist_ok=True)
+            shutil.copy2(vzor_dir / 'vzor_doplnku.sample.json', assets / 'vzor_doplnku.json')
+            (assets / 'doplnky.json').write_text(
+                json.dumps({'vzor_doplnku': {'enabled': True, 'mode': 'server', 'server_url': '/api/vzor_server.php'}}),
+                encoding='utf-8',
+            )
+            res = plugins.load_and_run_plugins(
+                {'nazev': 'Test'},
+                {'mpp': 0.2, 'w': 4000, 'h': 2000},
+                _dummy_project_xy,
+                assets_dir=assets,
+                site_dir=site,
+                build_dir=build,
+                server_root=server_root,
+                plugins_dir=plugins_dir,
+            )
+            self.assertTrue(res['vzor_doplnku']['config']['profanity_filter'])
+            self.assertTrue((server_root / 'server_data/profanity.json').is_file())
+            targets = json.loads((server_root / 'server_data/vzor_doplnku.targets.json').read_text(encoding='utf-8'))
+            self.assertTrue(targets['profanity_filter'])
+
+            conn = sqlite3.connect(tmp / 'prof.sqlite')
+            _, st = vzor.handle_action({'action': 'start', 'levelId': '1'}, targets, conn, secret, now_ms=1000)
+            ticket = st['ticket']
+            t_ms = 1500
+            for q_idx in st['order']:
+                q = targets['levels'][0]['questions'][q_idx]
+                hx, hy = q['xy'] if 'xy' in q else (sum(p[0] for p in q['targets'][0]['points']) / len(q['targets'][0]['points']), sum(p[1] for p in q['targets'][0]['points']) / len(q['targets'][0]['points']))
+                _, r = vzor.handle_action({'action': 'verify', 'x': hx, 'y': hy, 'ticket': ticket}, targets, conn, secret, now_ms=t_ms)
+                ticket = r['ticket']
+                t_ms += 500
+
+            c_bad, r_bad = vzor.handle_action({'action': 'finish', 'nickname': 'k.u.r.v.a', 'tickets': [ticket]}, targets, conn, secret, now_ms=t_ms + 500)
+            self.assertEqual(c_bad, 400)
+            self.assertEqual(r_bad['error'], 'profanity_nickname')
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM scores').fetchone()[0], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

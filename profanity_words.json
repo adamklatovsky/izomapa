@@ -1,0 +1,27 @@
+{
+  "exact_words": [
+    "vul", "vole", "blb", "blbc", "blbce", "blbec", "blbci", "blbco", "blbecek",
+    "pica", "pico", "picu", "pice", "picus", "picov", "picovat",
+    "kunda", "kundy", "kundu", "kundo", "kundic", "kundicka",
+    "srac", "debil", "debilni", "debile", "kreten", "kretene", "idiot", "idiote",
+    "hajzl", "hajzle", "chuj", "chuje", "buzna", "buzny", "krypl", "magor",
+    "nazi", "neonazi", "hitler", "heil",
+    "ass", "cock", "cocks", "dick", "dicks", "cunt", "slut", "whore", "twat", "wank", "wanker", "prick"
+  ],
+  "prefixes": [
+    "kurv", "zkurv", "vykurv", "kurev",
+    "curak", "curac",
+    "kokot",
+    "zmrd", "mrda", "mrdam", "mrdat", "mrdal", "mrdk", "mrdn", "omrd", "vymrd", "domrd",
+    "jebat", "jebu", "jebe", "jebal", "jebn", "zjeb", "vyjeb", "ojeb", "pojeb",
+    "prdel",
+    "srack", "srat", "posr", "nasr", "vysr", "zasr",
+    "sukat", "sukam", "sukas", "vysuk", "zasuk", "osuk",
+    "devk", "stetk",
+    "buzer", "teplous",
+    "fuck", "shit", "bitch", "asshole", "dickhead", "motherfuck", "bullshit", "retard", "nigger", "faggot"
+  ],
+  "compact_phrases": [
+    "kurv", "curak", "kokot", "zmrd", "prdel", "srack", "buzerant", "hitler", "fuck", "nigger", "faggot"
+  ]
+}

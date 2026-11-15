@@ -3,12 +3,101 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shutil
+import unicodedata
 from pathlib import Path
 from typing import Any, Callable
 
 
-_PRIVATE_CONFIG_KEYS = {'server_data_out', 'secret_key', 'admin_key', 'salt', 'targets_file'}
+_PRIVATE_CONFIG_KEYS = {
+    'server_data_out', 'secret_key', 'admin_key', 'salt', 'targets_file',
+    'profanity_extra_words', 'profanity_allow_words',
+}
+_PROFANITY_FILE = Path(__file__).resolve().with_name('profanity_words.json')
+_LEET_MAP = str.maketrans({'0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i'})
+_FALLBACK_PROFANITY = {
+    'exact_words': ['vul', 'vole', 'pica', 'pico', 'picu', 'kunda', 'debil', 'kreten', 'idiot', 'blbec', 'hajzl', 'chuj', 'fuck', 'shit', 'bitch', 'asshole'],
+    'prefixes': ['kurv', 'curak', 'kokot', 'zmrd', 'mrda', 'jebat', 'jebu', 'prdel', 'srack', 'srat', 'sukat', 'buzer'],
+    'compact_phrases': ['kurv', 'curak', 'kokot', 'zmrd', 'prdel', 'srack', 'buzerant', 'fuck'],
+}
+
+
+def _strip_accents(text: str) -> str:
+    return ''.join(ch for ch in unicodedata.normalize('NFKD', text) if not unicodedata.combining(ch))
+
+
+def normalize_profanity_text(text: str, leet: bool = False) -> str:
+    """Převede text na malá ASCII písmena; volitelně nahradí běžné leetspeak znaky."""
+    out = _strip_accents(str(text or '').lower())
+    if leet:
+        out = out.translate(_LEET_MAP)
+    return out
+
+
+def _collapse_repeats(token: str, max_repeat: int = 1) -> str:
+    return re.sub(r'(.)\1{' + str(max_repeat) + r',}', r'\1' * max_repeat, token)
+
+
+def load_profanity_words(cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Načte sdílený slovník sprostých slov a sloučí ho s volitelnou konfigurací doplňku."""
+    base = json.loads(_PROFANITY_FILE.read_text(encoding='utf-8')) if _PROFANITY_FILE.is_file() else dict(_FALLBACK_PROFANITY)
+    exact = {normalize_profanity_text(w) for w in base.get('exact_words', []) if str(w).strip()}
+    prefixes = {normalize_profanity_text(w) for w in base.get('prefixes', []) if str(w).strip()}
+    compact = {normalize_profanity_text(w) for w in base.get('compact_phrases', []) if str(w).strip()}
+
+    cfg = cfg or {}
+    allow = {normalize_profanity_text(w) for w in cfg.get('profanity_allow_words', []) if str(w).strip()}
+    for extra in cfg.get('profanity_extra_words', []):
+        norm = normalize_profanity_text(str(extra)).strip()
+        if norm:
+            exact.add(norm)
+            if len(norm) >= 4:
+                prefixes.add(norm)
+
+    return {
+        'enabled': bool(cfg.get('profanity_filter', True)),
+        'exact_words': sorted(exact - allow),
+        'prefixes': sorted(prefixes - allow),
+        'compact_phrases': sorted(compact - allow),
+        'allow_words': sorted(allow),
+    }
+
+
+def contains_profanity(text: str, cfg: dict[str, Any] | None = None) -> bool:
+    """Vrátí True, pokud text (přezdívka) obsahuje nepovolené slovo (vč. diakritiky, teček a leetspeaku)."""
+    rules = load_profanity_words(cfg)
+    if not rules['enabled']:
+        return False
+
+    exact = set(rules['exact_words'])
+    prefixes = tuple(rules['prefixes'])
+    compact_phrases = tuple(rules['compact_phrases'])
+    allow = set(rules['allow_words'])
+
+    for leet in (False, True):
+        norm = normalize_profanity_text(text, leet=leet)
+        # Slepí rozsekaná písmena typu "k.u.r.v.a" nebo "p i c a" do jednoho tokenu
+        merged = re.sub(r'(?<![a-z0-9])(?:[a-z0-9][\s._*+-]+){2,}[a-z0-9](?![a-z0-9])', lambda m: re.sub(r'[^a-z0-9]', '', m.group(0)), norm)
+        tokens = re.findall(r'[a-z0-9]+', merged)
+        for tok in tokens:
+            if tok in allow:
+                continue
+            for cand in (tok, _collapse_repeats(tok, 1)):
+                if cand in allow:
+                    continue
+                if cand in exact or (prefixes and cand.startswith(prefixes)):
+                    return True
+        compact = re.sub(r'[^a-z0-9]+', '', norm)
+        for cand_compact in (compact, _collapse_repeats(compact, 1)):
+            if any(phrase in cand_compact for phrase in compact_phrases):
+                return True
+    return False
+
+
+def censor_profanity(text: str, cfg: dict[str, Any] | None = None, replacement: str = '***') -> str:
+    """Nahradí nevhodnou přezdívku zástupným textem pro defenzivní zobrazení v žebříčku."""
+    return replacement if contains_profanity(text, cfg) else text
 
 
 def _normalize_entries(raw: Any) -> dict[str, dict[str, Any]]:
@@ -162,15 +251,21 @@ def load_and_run_plugins(
         manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.is_file() else {}
         merged_cfg: dict[str, Any] = {
             'mode': manifest.get('default_mode', 'client'),
+            'profanity_filter': True,
             **dict(manifest.get('defaults') or {}),
             **user_cfg,
         }
         mode = merged_cfg.get('mode', 'client')
+        profanity_cfg = load_profanity_words(merged_cfg)
 
         server_data_dir = server_p / 'server_data'
         if mode == 'server':
             server_data_dir = ensure_server_data_protection(server_p)
             merged_cfg.setdefault('server_data_out', str(server_data_dir / f'{plugin_id}.targets.json'))
+            (server_data_dir / 'profanity.json').write_text(
+                json.dumps(profanity_cfg, ensure_ascii=False, indent=2),
+                encoding='utf-8',
+            )
 
         ctx: dict[str, Any] = {
             'plugin_id': plugin_id,
@@ -184,6 +279,8 @@ def load_and_run_plugins(
             'build_dir': build_p,
             'server_root': server_p,
             'server_data_dir': server_data_dir,
+            'profanity_config': profanity_cfg,
+            'contains_profanity': contains_profanity,
         }
 
         hook_rel = manifest.get('hook', 'overlay_hook.py')
