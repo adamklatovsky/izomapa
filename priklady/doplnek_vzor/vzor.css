@@ -1,0 +1,23 @@
+.vzor-tab {
+  background: var(--panel, #232d42);
+  color: var(--ink, #eef1e6);
+  border: 2px solid var(--edge, #3a4762);
+  border-left: 0;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-family: var(--display, monospace);
+}
+.vzor-panel {
+  position: fixed;
+  z-index: 4;
+  top: 90px;
+  right: 16px;
+  width: min(290px, calc(100vw - 32px));
+  background: var(--panel, #232d42);
+  color: var(--ink, #eef1e6);
+  border: 2px solid var(--edge, #3a4762);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.vzor-panel[hidden] { display: none; }

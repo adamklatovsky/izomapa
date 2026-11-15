@@ -1,0 +1,38 @@
+{
+  "title": "Vzorový doplněk",
+  "difficulties": {
+    "easy": { "name": "Den", "night": 0.0, "weather": "clear" },
+    "hard": { "name": "Noc a déšť", "night": 1.0, "weather": "rain" }
+  },
+  "levels": [
+    {
+      "lvl": "1",
+      "text": "Ukázková úroveň (bod i polygon)",
+      "camera": [50.769, 15.058, 1.2],
+      "questions": [
+        {
+          "id": "bod_1",
+          "text": "Najdi bod A",
+          "lat": 50.7697,
+          "lon": 15.0585,
+          "radius": 35,
+          "answer": "Ukázkový bod A"
+        },
+        {
+          "id": "oblast_1",
+          "text": "Najdi oblast B (polygon)",
+          "targets": [
+            {
+              "polygon": [
+                [50.7685, 15.0570],
+                [50.7688, 15.0575],
+                [50.7682, 15.0578]
+              ]
+            }
+          ],
+          "answer": "Ukázková polygonální oblast B"
+        }
+      ]
+    }
+  ]
+}

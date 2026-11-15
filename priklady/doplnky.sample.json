@@ -1,0 +1,8 @@
+{
+  "vzor_doplnku": {
+    "enabled": true,
+    "mode": "server",
+    "server_url": "/api/vzor_server.php",
+    "server_data_out": "site_server/server_data/vzor_doplnku.targets.json"
+  }
+}

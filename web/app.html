@@ -205,7 +205,11 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   transition: transform .1s ease, background .1s ease;
 }
 .card-neighbor-btn:hover, .card-neighbor-btn:focus-visible { background: #ffe08a; transform: translateY(-1px); }
-.nolabels .pin, .far .pin:not(.need):not(.neighbor) { display: none !important; }
+.nolabels .pin, .far .pin:not(.need):not(.neighbor), body.plugins-hide-pins .pin { display: none !important; }
+#pluginLayers { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; pointer-events: none; z-index: 2; }
+.izomapa-slot-tabs { position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 88px); left: calc(max(16px, env(safe-area-inset-left, 0px)) + var(--pw, 356px)); transition: left .2s ease; display: flex; flex-direction: column; gap: 6px; }
+.folded .izomapa-slot-tabs { left: 0; }
+.izomapa-slot-tabs:empty { display: none; }
 .loading { position: fixed; inset: 0; display: grid; place-items: center; font-family: var(--display); color: var(--muted); z-index: 1; pointer-events: none; }
 .mbar { display: none; }
 
@@ -218,6 +222,8 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   .panel.closed .sub { display: none; }
   h1 { font-size: 1.2rem; }
   .minimap, .fold { display: none; }
+  .izomapa-slot-tabs { left: auto; right: 0; top: calc(env(safe-area-inset-top, 0px) + 84px); align-items: flex-end; }
+  .folded .izomapa-slot-tabs { left: auto; }
   .controls { right: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 76px); flex-direction: column; gap: 6px; }
   .controls #zin, .controls #share { display: none; }
   .controls .px-btn { width: 44px; height: 44px; opacity: .92; }
@@ -248,10 +254,11 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
 }
 </style>
 
-<div id="map" aria-label="Izometrická pixel-art mapa {{MESTO}}"><div id="osd"></div><canvas id="fx"></canvas></div>
+<div id="map" aria-label="Izometrická pixel-art mapa {{MESTO}}"><div id="osd"></div><div id="pluginLayers"></div><canvas id="fx"></canvas></div>
 <div class="loading" id="loading">Načítám mapu…</div>
 
 <button class="fold" id="fold" type="button" aria-controls="panel" aria-expanded="true" aria-label="Zasunout panel" title="Zasunout panel">‹</button>
+<div class="izomapa-slot-tabs" id="pluginTabsSlot"></div>
 <aside class="panel" id="panel">
   <div class="head">
     <div>
@@ -612,7 +619,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     $('osd').addEventListener('gesturestart', (e) => { e.preventDefault(); gs = 1; });
     $('osd').addEventListener('gesturechange', (e) => { e.preventDefault(); viewer.viewport.zoomBy(e.scale / gs); viewer.viewport.applyConstraints(); gs = e.scale; });
   }
-  initLayers();
+  const layersReady = initLayers();
   const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   function applyTime() {
     const t = state.night;
@@ -904,8 +911,17 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   }
 
   const vpToImg = (pos) => { const p = viewer.viewport.viewerElementToViewportCoordinates(pos); return [p.x * W, p.y * W]; };
+  const pluginRegistry = {}, pluginClicks = [];
+  let pluginCapture = false, pluginCursor = '';
   viewer.addHandler('canvas-click', (e) => {
     if (!e.quick) return;
+    if (pluginClicks.length || pluginCapture) {
+      const [ix, iy] = vpToImg(e.position);
+      const evt = { x: ix, y: iy, screenX: e.position.x, screenY: e.position.y, originalEvent: e };
+      let handled = false;
+      for (const h of pluginClicks) if (h.fn(evt) === true) { handled = true; break; }
+      if (handled || pluginCapture) return;
+    }
     if (typeof PLANES !== 'undefined') {
       const pl = PLANES.drawn.find((q) => Math.hypot(q[0] - e.position.x, q[1] - e.position.y) < 26);
       if (pl) { planeFollow(pl[2]); return; }
@@ -919,6 +935,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     if (b) showBuilding(b); else showPoint(ix, iy);
   });
   $('osd').addEventListener('pointermove', (e) => {
+    if (pluginCursor || pluginCapture) { state.hover = null; $('osd').style.cursor = pluginCursor; return; }
     const r = $('osd').getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
     if (typeof PLANES !== 'undefined') {
@@ -2691,6 +2708,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     const vp = viewer.viewport;
     const p0 = vp.pixelFromPoint(new OpenSeadragon.Point(0, 0), true), p1 = vp.pixelFromPoint(new OpenSeadragon.Point(1, 0), true);
     const sx = (p1.x - p0.x) / W, ox = p0.x, oy = p0.y;
+    if ($('pluginLayers').childElementCount) $('pluginLayers').style.transform = `translate(${ox}px,${oy}px) scale(${sx})`;
     const vis = (ix, iy, m = 40) => { const x = ox + ix * sx, y = oy + iy * sx; return x > -m && y > -m && x < cw + m && y < ch + m; };
     const night = state.night, t = now / 1000, snowy = state.season === 'winter';
     $('map').classList.toggle('far', sx < 0.3);
@@ -2971,5 +2989,53 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     }
   }
   requestAnimationFrame(frame);
+
+  window.Izomapa = {
+    getPluginData: (id) => OV.doplnky?.[id]?.data ?? null,
+    getPluginConfig: (id) => OV.doplnky?.[id]?.config ?? {},
+    registerPlugin(id, inst) {
+      if (pluginRegistry[id]?.onDestroy) try { pluginRegistry[id].onDestroy(); } catch {}
+      pluginRegistry[id] = inst || {};
+      if (inst?.onInit) { if (ready) inst.onInit(window.Izomapa); else layersReady.then(() => inst.onInit(window.Izomapa)); }
+    },
+    onMapClick(fn, options = { priority: 0 }) {
+      const entry = { fn, priority: options?.priority ?? 0 };
+      pluginClicks.push(entry); pluginClicks.sort((a, b) => b.priority - a.priority);
+      return () => { const i = pluginClicks.indexOf(entry); if (i >= 0) pluginClicks.splice(i, 1); };
+    },
+    setClickCapture(en) { pluginCapture = Boolean(en); },
+    setCursor(cur) { pluginCursor = cur || ''; $('osd').style.cursor = pluginCursor; },
+    setPinsVisible(vis) { document.body.classList.toggle('plugins-hide-pins', !vis); },
+    getPluginLayer(id) {
+      let el = $('pluginLayers').querySelector(`[data-plugin="${id}"]`);
+      if (!el) { el = document.createElement('div'); el.dataset.plugin = id; el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;'; $('pluginLayers').appendChild(el); }
+      return el;
+    },
+    getView() { const c = viewer.viewport.getCenter(true); return { x: c.x * W, y: c.y * W, zoom: viewer.viewport.getZoom(true) }; },
+    panTo(x, y, zoom, animated = true) {
+      if (Number.isFinite(x) && Number.isFinite(y)) viewer.viewport.panTo(new OpenSeadragon.Point(x / W, y / W), !animated);
+      if (Number.isFinite(zoom)) viewer.viewport.zoomTo(zoom, null, !animated);
+    },
+    getEnvironment: () => ({ night: state.night, rain: state.weather === 'rain', weather: state.weather, season: state.season, realTime: $('realTime').checked, realWeather: $('realWeather').checked }),
+    setEnvironment(env = {}) {
+      if (env.season) setSeason(env.season);
+      if (env.realWeather !== undefined) { $('realWeather').checked = Boolean(env.realWeather); if (env.realWeather) applyRealWeather(); }
+      else if (env.weather !== undefined || env.rain !== undefined) $('realWeather').checked = false;
+      const w = env.weather !== undefined ? env.weather : (env.rain !== undefined ? (env.rain ? 'rain' : 'clear') : undefined);
+      if (w !== undefined) setWeather(w);
+      if (env.realTime !== undefined) { $('realTime').checked = Boolean(env.realTime); if (env.realTime) tickReal(); }
+      else if (typeof env.night === 'number') $('realTime').checked = false;
+      if (typeof env.night === 'number') { state.night = Math.max(0, Math.min(1, env.night)); $('night').value = Math.round(state.night * 100); applyTime(); }
+    },
+    getUiSlot(slotName = 'sidebar-tabs') { return slotName === 'sidebar-tabs' ? $('pluginTabsSlot') : null; },
+  };
+  if (OV.doplnky && Object.keys(OV.doplnky).length) {
+    layersReady.then(() => {
+      for (const p of Object.values(OV.doplnky)) {
+        for (const href of p.styles || []) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l); }
+        for (const src of p.scripts || []) { const s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); }
+      }
+    });
+  }
 })();
 </script>

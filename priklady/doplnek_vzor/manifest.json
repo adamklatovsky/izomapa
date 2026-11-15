@@ -1,0 +1,10 @@
+{
+  "id": "vzor_doplnku",
+  "name": "Vzorový doplněk",
+  "version": "1.0.0",
+  "description": "Referenční šablona doplňku pro Izomapu (client i server režim s HMAC tickety).",
+  "default_mode": "client",
+  "hook": "overlay_hook.py",
+  "scripts": ["vzor.js"],
+  "styles": ["vzor.css"]
+}
