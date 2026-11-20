@@ -1,0 +1,22 @@
+/* Doplněk „Rychlostní zkouška“ – barvy z proměnných mapy (--panel, --ink, --lamp, --grass, --display, --body) */
+.rz-btn { font-size: 1.1rem; }
+.rz-dlg { max-width: 560px; }   /* vzhled dialogu přebírá od mapy (třída help) */
+.rz-dlg h3 { margin: 0 28px 8px 0; font-family: var(--display, inherit); }
+.rz-dlg h4 { margin: 12px 0 4px; }
+.rz-x { position: absolute; right: 10px; top: 8px; background: none; border: 0; color: inherit; font-size: 1.5rem; cursor: pointer; }
+.rz-akce { display: flex; flex-wrap: wrap; gap: 6px; }
+.rz-muted { opacity: .7; } .rz-zdroj { font-size: 12px; }
+.rz-vysl { font-weight: 700; }
+.rz-scroll { overflow-x: auto; }
+.rz-tab { border-collapse: collapse; font-size: 13px; width: 100%; }
+.rz-tab th, .rz-tab td { padding: 2px 6px; text-align: right; white-space: nowrap; }
+.rz-tab td:nth-child(2), .rz-tab th:nth-child(2) { text-align: left; }
+.rz-tab .best { color: var(--grass, #6be07a); font-weight: 700; }
+.rz-hud, .rz-editor { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px);
+  background: var(--panel, #1d2230); color: var(--ink, #eee); border: 2px solid var(--lamp, #f2c66d); padding: 6px 12px; font: 700 15px var(--body, sans-serif); text-align: center; }
+.rz-split { min-height: 1.4em; } .rz-split .plus { color: #ff6b5a; } .rz-split .minus { color: #6be07a; }
+.rz-editor { font-weight: 400; } .rz-editor-akce { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin-top: 6px; }
+.rz-svetla { position: fixed; z-index: 6; left: 50%; top: 32%; transform: translateX(-50%); font: 700 46px var(--display, sans-serif); color: #ff3b2a; text-shadow: 0 0 8px #000; pointer-events: none; }
+.rz-pad { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.rz-pad button { min-width: 52px; min-height: 52px; font: 700 14px var(--body, sans-serif); background: var(--panel, #1d2230); color: var(--ink, #eee); border: 2px solid var(--lamp, #f2c66d); }
+@media (pointer: fine) { .rz-pad { display: none; } }

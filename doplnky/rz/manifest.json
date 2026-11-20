@@ -1,0 +1,14 @@
+{
+  "id": "rz",
+  "name": "Rychlostní zkouška",
+  "version": "1.0.0",
+  "description": "Hra: rallyové auto po trati rychlostní zkoušky (např. městská RZ Bohemia Rally), fyzika se smykem, mezičasy a tabulka výsledků (v prohlížeči, nebo společná na serveru).",
+  "hook": "overlay_hook.py",
+  "libs": ["profanity", "server_client"],
+  "scripts": ["rz.js"],
+  "styles": ["rz.css"],
+  "defaults": {
+    "server_url": "",
+    "profanity_filter": true
+  }
+}

@@ -1,0 +1,16 @@
+/* Doplněk „Vyhlídkový let“ – barvy z proměnných mapy */
+.let-btn { font-size: 1.1rem; }
+.let-dlg { max-width: 540px; }
+.let-x { position: absolute; right: 10px; top: 8px; background: none; border: 0; color: inherit; font-size: 1.5rem; cursor: pointer; }
+.let-vysl { font-weight: 700; } .let-muted { opacity: .7; font-size: 12px; }
+.let-dlg ol li { margin: 2px 0; }
+.let-hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.let-panel { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px);
+  background: var(--panel, #1d2230); color: var(--ink, #eee); border: 2px solid var(--lamp, #f2c66d); padding: 6px 12px; font: 700 14px var(--body, sans-serif); text-align: center; }
+.let-pal { display: inline-block; width: 70px; height: 9px; border: 1px solid var(--ink, #eee); vertical-align: middle; }
+.let-pal i { display: block; height: 100%; background: var(--grass, #6be07a); }
+.let-sipka { position: absolute; left: 50%; top: 50%; font-size: 28px; color: var(--lamp, #f2c66d); text-shadow: 0 0 3px #000; transform-origin: 50% 50%; }
+.let-msg { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: var(--lamp, #f2c66d); color: var(--night, #111); font: 700 18px var(--display, sans-serif); padding: 6px 14px; }
+.let-pad { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: auto; }
+.let-pad button { min-width: 48px; min-height: 48px; font: 700 15px var(--body, sans-serif); background: var(--panel, #1d2230); color: var(--ink, #eee); border: 2px solid var(--lamp, #f2c66d); }
+@media (pointer: fine) { .let-pad { display: none; } }

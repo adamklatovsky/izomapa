@@ -1,0 +1,14 @@
+{
+  "id": "vyhlidkovy_let",
+  "name": "Vyhlídkový let",
+  "version": "1.0.0",
+  "description": "Hra: s dvouplošníkem An-2 vzlétni z místního letiště, obleť místa z mista.json, vysaď parašutisty a přistaň zpátky na dráze. Bez letiště startuje ve vzduchu nad městem.",
+  "hook": "overlay_hook.py",
+  "libs": ["profanity"],
+  "scripts": ["vyhlidkovy_let.js"],
+  "styles": ["vyhlidkovy_let.css"],
+  "defaults": {
+    "nazev": "Vyhlídkový let",
+    "profanity_filter": true
+  }
+}
