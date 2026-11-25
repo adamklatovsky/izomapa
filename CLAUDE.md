@@ -165,6 +165,10 @@ Ukazuj uživateli výřezy před a po.
 - **Cizí `assets/custom_prep.py` a `assets/custom_models.js` jsou programy, ne data.** Spouštějí se při stavbě mapy; od cizího člověka je
   nepřebírej bez přečtení.
 - Náhled pouštěj jen na tomto počítači (`npm run nahled` poslouchá na 127.0.0.1). Tajemství (`.dev.vars`, hesla, klíče) nikdy necommituj.
+- **Dotazy na cizí servery jsou za uživatele, ne za autora šablony.** `User-Agent`, `Referer` ani kontakt v kódu nesmí obsahovat
+  `github.com/adamklatovsky/izomapa`, jméno ani e-mail autora: stížnosti a blokace provozovatele zdroje by šly za ním. Piš
+  `izomapa-<co>/1.0` a jako odkaz web mapy (`url` v `mesto.json`) nebo repozitář uživatele. Klíče, účty a souhlasy k datům (API klíč,
+  odběr, smlouva) si uživatel vyřizuje sám na sebe; klíč ani přístup jiné mapy nepoužívej.
 
 ## Jak to funguje (pro úpravy kódu)
 
