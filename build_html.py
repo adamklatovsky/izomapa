@@ -97,7 +97,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'VITR_ZDROJ': ', ' + ('počasí a vítr' if M.get('pocasi') and M.get('vitr') else 'počasí' if M.get('pocasi') else 'vítr') + ' © <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)' if M.get('vitr') or M.get('pocasi') else '',
         # další zdroje dat města (mesto.json "dalsi_zdroje": [{"text": "…", "url": "…"}]), např. pasporty a technická mapa města
         'DALSI_ZDROJE': ''.join(f', <a href="{E(z["url"])}" target="_blank" rel="noopener">{E(z["text"])}</a>' if z.get('url') else f', {E(z["text"])}'
-                                for z in M.get('dalsi_zdroje', [])),
+                                for z in ({'text': z} if isinstance(z, str) else z for z in (M.get('dalsi_zdroje') or []))),
         'PLUHY_ZDROJ': ', sypače zimní údržby © <a href="https://udrzba.rsd.cz/" target="_blank" rel="noopener">ŘSD ČR</a>' if M.get('pluhy', False) else '',
         'LETADLA_ZDROJ': ', letadla © <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> (ODbL)' if M.get('letadla', False) else '',
         'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'

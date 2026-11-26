@@ -158,7 +158,7 @@ Ukazuj uživateli výřezy před a po.
 - Fotky a podklady uživatele do gitu nepatří (`fotky/`, `podklady/` jsou v `.gitignore`).
 - Patička nápovědy s uvedením zdrojů dat (OpenStreetMap, ČÚZK, dopravce) musí zůstat.
   Další zdroje města (pasport komunikací, technická mapa, ortofoto…) se do patičky přidají v `mesto.json`:
-  `"dalsi_zdroje": [{"text": "pasport komunikací © Magistrát města X", "url": "https://…"}]` (`url` je volitelné; bez něj je to jen text).
+  `"dalsi_zdroje": [{"text": "pasport komunikací © Magistrát města X", "url": "https://…"}]` (`url` je volitelné; bez něj je to jen text, stačí i holý řetězec). Text nekonči tečkou, patička ji přidá sama. Obce (`obce/`) dědí zdroje města, jiné si nastaví vlastním `"dalsi_zdroje"` (prázdný seznam = žádné).
 - Funguje jen v Česku (ČÚZK). Pro jinou zemi řekni, co chybí: laserové výšky, ortofoto, ZABAGED.
 - Hosting řeší uživatel. Výsledek je statická složka `site/`. Doporuč jen, ať zvolí hosting, který zvládne hodně souborů
   (hlášení nepřesností potřebují server, viz výše).
