@@ -157,6 +157,8 @@ Ukazuj uživateli výřezy před a po.
   a z fotek, které uživatel sám pořídil.
 - Fotky a podklady uživatele do gitu nepatří (`fotky/`, `podklady/` jsou v `.gitignore`).
 - Patička nápovědy s uvedením zdrojů dat (OpenStreetMap, ČÚZK, dopravce) musí zůstat.
+  Další zdroje města (pasport komunikací, technická mapa, ortofoto…) se do patičky přidají v `mesto.json`:
+  `"dalsi_zdroje": [{"text": "pasport komunikací © Magistrát města X", "url": "https://…"}]` (`url` je volitelné; bez něj je to jen text).
 - Funguje jen v Česku (ČÚZK). Pro jinou zemi řekni, co chybí: laserové výšky, ortofoto, ZABAGED.
 - Hosting řeší uživatel. Výsledek je statická složka `site/`. Doporuč jen, ať zvolí hosting, který zvládne hodně souborů
   (hlášení nepřesností potřebují server, viz výše).
