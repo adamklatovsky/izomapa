@@ -40,3 +40,9 @@ def cekani_na_konecne(spoje, druh, okno=1800):
             if a and a[0] <= q[3]:
                 q[7] = q[3] - a.popleft(); n += 1
     return n
+
+
+def pravidelna_linka(cislo, druh):
+    """Má spoj pravidelnou trasu? Dlouhá čísla mívá poptávková doprava; vlaky (druh 2) mají dlouhá čísla vždy
+    a šestimístná čísla jsou licenční čísla linek z celostátního GTFS CIS JŘ."""
+    return druh == 2 or len(cislo) <= 4 or (len(cislo) == 6 and cislo.isdigit())
