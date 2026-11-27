@@ -53,7 +53,7 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    (`"pluhy": true`). Také jen na Cloudflare (prostředník `functions/api/pluhy.js`); městské ulice ŘSD neudržuje.
 4. **Stavba:** `./postav.sh` (spouštěj na pozadí, běží dlouho). Kroky, které už mají výsledek, přeskakuje.
 5. **Kontrola:** `python compose.py summer 8` udělá `build/nahled_summer.png`. Prohlédni si ho (švy mezi čtverci,
-   prázdná místa, divné barvy) a pošli uživateli. Pak `npm run nahled` a mapa běží na http://localhost:8000.
+   prázdná místa, divné barvy; podrobně `navody/kontrola_mapy.md`) a pošli uživateli. Pak `npm run nahled` a mapa běží na http://localhost:8000.
 6. **Doladění s uživatelem** (níže). Po každé úpravě: `./postav.sh render` (jen scény, render a web). Kreslí jen čtverce, kde se
    změnila scéna, kód renderu, rozlišení nebo schválené modely památek ve čtverci (otisk v `build/…/otisk_renderu`,
    `nastroje/otisk.py`), ostatní přeskočí. Vše znovu: smaž `site/tiles`.
@@ -98,7 +98,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   připomeň mu, že detailní rozlišení je ukáže líp (sekce „Základní, nebo detailní rozlišení“ v README).
 - **Příběhy míst** → `mista.json`: `[{"nazev", "lat", "lon", "text"}]`. Texty piš jen z ověřených zdrojů (web obce,
   Památkový katalog, Wikipedie s odkazem). Když si nejsi jistý, zeptej se uživatele. Nic si nevymýšlej.
-  Ukázka je v `priklady/mista.json`.
+  Ukázka je v `priklady/mista.json`, postup rešerše v `navody/pribehy.md` (v Claude Code agent `pribehy`).
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
   Budova zakreslená dvakrát přes sebe (např. kostel celý i po částech, věž zvlášť) zkazí vzhled dominanty: duplicity
@@ -149,6 +149,25 @@ Ukazuj uživateli výřezy před a po.
   Při nasazení uživateli řekni, ať nastaví i tajný `SALT` (`npx wrangler secret put SALT`, dlouhý náhodný řetězec):
   bez něj se otisk IP počítá s veřejnou výchozí solí a z uniklé databáze jde IP dopočítat. `TURNSTILE_SECRET` nezapínej,
   formulář v mapě neposílá token a všechna hlášení by pak selhala.
+
+## Agenti a postupy
+
+Role a postupy jsou v obyčejných návodech, takže platí pro libovolného agenta:
+
+- `navody/kontrola_mapy.md` kontrola postavené mapy, `navody/pribehy.md` rešerše příběhů míst,
+  `navody/review.md` kontrola změny před pull requestem, `pamatky/ZADANI_MODELARE.md` modelář a rešeršér památek.
+- Skills (vstupní body postupů): `nove-mesto`, `mhd`, `pamatky`, `kontrola-mapy`, `pred-pr` v `.claude/skills/`
+  (Claude Code) a stejně v `.agents/skills/` (Codex). Obě kopie musí být stejné (`tests/test_navody.py`).
+- Claude Code má navíc agenty v `.claude/agents/`: `modelar`, `reserser`, `kontrolor-mapy`, `pribehy`, `reviewer`.
+  Jsou to tenké odkazy na návody výše; model dědí od hlavní session (`inherit`), levnější jde zadat při spuštění.
+
+## Změny obecného kódu (pull request autorovi)
+
+- Testy: `./tests/run.sh` (Windows: `sh tests/run.sh`). Projít musí před každým PR.
+- `prep.py` je deterministický: změnu, která nemá měnit vzhled, ověř porovnáním `scene.json` postaveného čtverce
+  před a po (`cmp`).
+- Práce ve forku a ve vlastní větvi z `upstream/main`, jedno téma na PR, bez dat a úprav města. Kontrola podle
+  `navody/review.md` (skill `pred-pr`).
 
 ## Pravidla
 
@@ -210,7 +229,7 @@ Ukazuj uživateli výřezy před a po.
   takže pořadí souborů je pořadí kódu. Kde co je: `00-zaklad` start, `state` · `10-vrstvy` OpenSeadragon a vrstvy čtverců, výzdoba ·
   `20-souradnice` · `30-budovy` index a klikání · `40-karta` karta místa · `45-doplnky-klik` · `60-navigace` hledání, odkazy, ukázka ·
   `65-minimapa` · `70-animace` auta (`CAR_DENS`, `VTYP`, `limitCars`), přejezdy, semafory, tramvaje, MHD, lyžaři · `75-chodci` ·
-  `80-vozidla` (`vehicleSprite`, `TRAINS`) · `82-stromy-u-cest` · `84-kresleni-vozidel` (`drawVehicle`, světla, vánoční výzdoba, svíčky) ·
+  `80-vozidla` (`vehicleSprite`, `TRAINS`) · `82-stromy-u-cest` · `84-kresleni-vozidel` (`drawVehicle`, světla, vánoční výzdoba, svíčky) · `85-sypace` ·
   `86-voda-mraky` · `87-letadla` · `88-pocasi` (déšť, úsporný režim `setEco`) · `89-kresleni` (`frame`) · `90-doplnky-api` (`window.Izomapa`, zavaděč).
   CSS: `00-zaklad-panel`, `10-karta-napoveda`, `20-vilda` (sledování), `30-mapa-ovladani`, `40-mobil`. Stejná čísla jako v Liberci = stejný oddíl,
   změny jde přebírat po souborech. Nový soubor = nové číslo na správném místě. Texty `{{…}}` doplní `build_html.py` z `mesto.json`
