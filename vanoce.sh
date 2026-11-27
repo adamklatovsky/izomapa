@@ -35,7 +35,7 @@ for c in $PLAN; do
   KEEP="$KEEP $c"
 done
 # z tiles.json pryč vrstvy čtverců, kde už výzdoba není
-[ -f site/tiles.json ] && python - $KEEP <<'PY'
+if [ -f site/tiles.json ]; then python - $KEEP <<'PY'      # if, ne &&: chyba pythonu skript zastaví (set -e)
 import json, sys
 keep = set(sys.argv[1:])
 t = json.load(open('site/tiles.json'))
@@ -46,5 +46,6 @@ clean(t, '0,0')
 for ch in t.get('chunks', {}).values(): clean(ch, f"{ch['chunk'][0]},{ch['chunk'][1]}")
 json.dump(t, open('site/tiles.json', 'w'))
 PY
+fi
 python build_html.py > /dev/null
 echo "Hotovo."
