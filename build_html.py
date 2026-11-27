@@ -89,6 +89,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'XMAS_LL': json.dumps((lambda v: v if v and isinstance(v[0], list) else [v] if v else [])(M.get('vanocni_strom'))),   # vánoční stromy [[lat, lon], ...]
         'KLUZISTE': json.dumps(M.get('kluziste') or []),
         'STANKY': json.dumps(M.get('vanocni_stanky') or []),
+        'ROZCESTNIKY': json.dumps(json.load(open('assets/rozcestniky.json', encoding='utf-8')) if os.path.exists('assets/rozcestniky.json') else [], ensure_ascii=False),   # turistické rozcestníky (nastroje/rozcestniky.py)
         'VANOCE': json.dumps(M.get('vanoce') or None),                 # termín vánoční vrstvy {"od": "11-11", "do": "01-06"} (assets/vanoce.json)
         'OBEC': json.dumps(M.get('nazev') if je_obec else None, ensure_ascii=False),
         'VLAK': json.dumps({'vychozi': (M.get('vlak') or {}).get('vychozi', 'regionova') if isinstance(M.get('vlak'), dict) else M.get('vlak', 'regionova'), 'linky': M['vlak'].get('linky', {}) if isinstance(M.get('vlak'), dict) else {}}),

@@ -127,6 +127,22 @@
       }
       flushLights(night, sx);
       for (const [o, z, sg] of xFront) if (sg) drawSigPost(o, z, sx, ox, oy, night); else drawXPost(o, z, sx, ox, oy, now, night);   // až po světlech aut, ať je kužel nepřekryje
+      if (sx > 0.3) for (const r of ROZC) {                // turistické rozcestníky: šedý sloupek, žluté tabulky se šipkami, nahoře bílo-červený pruh
+        if (!vis(r.ix, r.iy, 40) || occluded(r.ix, r.iy, r.d)) continue;
+        const X = Math.round(ox + r.ix * sx), Y = Math.round(oy + r.iy * sx), u = Math.max(2, Math.round(sx * 2.4)), H = Math.round(r.h * sx);
+        ctx.fillStyle = '#7a7d82'; ctx.fillRect(X - Math.ceil(u / 3), Y - H, Math.max(1, Math.ceil(u * 0.6)), H);
+        ctx.fillStyle = '#f4f4f0'; ctx.fillRect(X - Math.ceil(u / 3), Y - H - u, Math.max(1, Math.ceil(u * 0.6)), u);
+        ctx.fillStyle = '#d23a2e'; ctx.fillRect(X - Math.ceil(u / 3), Y - H - Math.ceil(u / 2), Math.max(1, Math.ceil(u * 0.6)), Math.ceil(u / 3));
+        ctx.fillStyle = '#f2c230';
+        ctx.beginPath(); ctx.moveTo(X, Y - H + u * 0.6); ctx.lineTo(X + u * 3, Y - H + u * 0.6); ctx.lineTo(X + u * 3.7, Y - H + u * 1.2); ctx.lineTo(X + u * 3, Y - H + u * 1.8); ctx.lineTo(X, Y - H + u * 1.8); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(X, Y - H + u * 2.2); ctx.lineTo(X - u * 3, Y - H + u * 2.2); ctx.lineTo(X - u * 3.7, Y - H + u * 2.8); ctx.lineTo(X - u * 3, Y - H + u * 3.4); ctx.lineTo(X, Y - H + u * 3.4); ctx.fill();
+        if (state.hoverRozc === r) {
+          ctx.font = `bold ${Math.max(11, Math.round(12 * Math.min(1.4, sx)))}px system-ui, sans-serif`;
+          const lab = r.n + (r.e ? ` · ${r.e} m` : ''), tw = ctx.measureText(lab).width, bx = X - tw / 2 - 5, by = Y - H - u - 24;
+          ctx.fillStyle = 'rgba(27,35,51,.92)'; ctx.fillRect(bx, by, tw + 10, 18); ctx.fillStyle = '#f2c230'; ctx.fillRect(bx, by + 17, tw + 10, 2);
+          ctx.fillStyle = '#e9e6dc'; ctx.textBaseline = 'middle'; ctx.fillText(lab, bx + 5, by + 9); ctx.textBaseline = 'alphabetic';
+        }
+      }
     }
     // chodci (jen zblízka, krok a pohyb jen u těch na obrazovce)
     if ($('l-people').checked && PEOPLE.length) {
