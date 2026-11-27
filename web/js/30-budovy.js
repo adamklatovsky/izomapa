@@ -20,7 +20,8 @@
       for (const [cx, cy, cid] of d.chimneys) { const id = sid(cid); chimneys.push([cx, cy, cid.split(':')[0], id, rnd(id), rnd(id + 0.5)]); }   // klíč čtverce a náhoda jednou, ne každý snímek
       for (const f of onChunk) f(k, d);
       return CH[k];
-    }).catch(() => { delete CH[k]; CH_ERR[k] = Date.now(); return null; }) };   // nepovedlo se: zkusit znovu, ale ne dřív než za 30 s
+    }, () => { delete CH[k]; CH_ERR[k] = Date.now(); return null; })   // nestáhlo se: zkusit znovu, ale ne dřív než za 30 s
+      .catch(() => null) };   // chyba při zpracování: znovu nenačítat, část dat už je v globálních seznamech
     return CH[k].ready;
   }
   function loadVisible() {
