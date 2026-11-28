@@ -102,7 +102,7 @@
   <details class="report" id="report" hidden>
     <summary>Nahlásit nepřesnost</summary>
     <form id="reportForm">
-      <textarea id="repNote" rows="3" maxlength="500" required placeholder="Co tu nesedí se skutečností?"></textarea>
+      <textarea id="repNote" aria-label="Co tu nesedí se skutečností" rows="3" maxlength="500" required placeholder="Co tu nesedí se skutečností?"></textarea>
       <button class="px-btn" type="submit">Odeslat</button>
       <span id="repMsg" role="status"></span>
     </form>
@@ -114,9 +114,9 @@
   <div class="scale" id="scale">1&nbsp;px = 20&nbsp;cm</div>
 </div>
 <div class="controls">
-  <button class="px-btn" id="zin" type="button" title="Přiblížit">+</button>
-  <button class="px-btn" id="zout" type="button" title="Oddálit">−</button>
-  <button class="px-btn" id="home" type="button" title="Celá mapa">⌂</button>
+  <button class="px-btn" id="zin" type="button" title="Přiblížit" aria-label="Přiblížit">+</button>
+  <button class="px-btn" id="zout" type="button" title="Oddálit" aria-label="Oddálit">−</button>
+  <button class="px-btn" id="home" type="button" title="Celá mapa" aria-label="Celá mapa">⌂</button>
   <button class="px-btn" id="share" type="button" title="Sdílet tento pohled" aria-label="Sdílet tento pohled"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"/><path d="M8 10H5v11h14V10h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"/></svg></button>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
