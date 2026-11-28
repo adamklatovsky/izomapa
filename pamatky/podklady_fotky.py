@@ -10,7 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'podklady-soukrome', 'pamatky')
 MESTO = json.load(open(os.path.join(ROOT, os.environ.get('IZO_MESTO', 'mesto.json')), encoding='utf-8'))
-UA = {'User-Agent': 'izomapa-pamatky/0.1 (reference photos)'}
+# za uživatele, ne za autora šablony (CLAUDE.md, Pravidla); Wikimedia chce v User-Agent kontakt, tím je web mapy
+UA = {'User-Agent': 'izomapa-pamatky/1.0' + (f" ({MESTO['url']})" if MESTO.get('url') else '')}
 DROBNE = '--drobne' in sys.argv   # drobné objekty (sochy, kříže): max 4 fotky, bez hledání podle názvu
 sys.argv = [x for x in sys.argv if x != '--drobne']
 MAX = 4 if DROBNE else 10
@@ -140,8 +141,6 @@ def run(slug, znovu=False, vyber=None, dotaz=None, filtr=None):
         if len(rest) > k:
             step = len(rest) / k; rest = [rest[int(i * step)] for i in range(k)]
         chosen = list(dict.fromkeys(first + rest))[:MAX]
-    for f in os.listdir(d):
-        if re.match(r'\d\d\.jpg$', f): os.remove(os.path.join(d, f))
     II = info(chosen); zdroje, thumbs = [], []
     for t in chosen:
         ii = II.get(t)
@@ -149,11 +148,16 @@ def run(slug, znovu=False, vyber=None, dotaz=None, filtr=None):
         try: im = Image.open(io.BytesIO(get(ii.get('thumburl') or ii['url']))).convert('RGB')
         except Exception as e: print('  chyba', t, e); continue
         if im.width > 1280: im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
-        n = f'{len(zdroje) + 1:02d}'; im.save(os.path.join(d, n + '.jpg'), quality=86)
+        n = f'{len(zdroje) + 1:02d}'
         m = ii.get('extmetadata', {})
         zdroje.append({'soubor': n + '.jpg', 'nazev': t[5:], 'commons': ii['descriptionurl'], 'autor': clean((m.get('Artist') or {}).get('value')),
                        'licence': clean((m.get('LicenseShortName') or {}).get('value')), 'datum': clean((m.get('DateTimeOriginal') or {}).get('value'))[:20]})
         thumbs.append((n, im))
+    # staré fotky mazat až po stažení nových: výpadek sítě by jinak nechal složku prázdnou a zdroje.json bez fotek
+    stare = [f for f in os.listdir(d) if re.match(r'\d\d\.jpg$', f)]
+    if not zdroje and stare: print(slug, 'žádná fotka se nestáhla, nechávám staré', flush=True); return
+    for f in stare: os.remove(os.path.join(d, f))
+    for n, im in thumbs: im.save(os.path.join(d, n + '.jpg'), quality=86)
     json.dump(zdroje, open(os.path.join(d, 'zdroje.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     if thumbs: arch(d, thumbs)
     print(slug, len(zdroje), 'fotek, kategorie', W.get('commons_cat'), flush=True)
