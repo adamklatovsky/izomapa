@@ -6,7 +6,7 @@
     try { if (performance.now() - osdT > 24) draw(now, false); } catch (err) { if (!drawErr) { drawErr = true; console.error(err); } }   // chyba ve snímku nezastaví smyčku, do konzole jen jednou
     requestAnimationFrame(frame);
   }
-  viewer.addHandler('update-viewport', () => { osdT = performance.now(); draw(osdT, true); });
+  viewer.addHandler('update-viewport', () => { osdT = performance.now(); try { draw(osdT, true); } catch (err) { if (!drawErr) { drawErr = true; console.error(err); } } });   // výjimka v obsluze by OpenSeadragonu zastavila smyčku a mapa by zamrzla
   function draw(now, moving) {
     if (!moving && eco && (skip = !skip)) return;      // úsporně: každý druhý snímek (při posunu mapy každý)
     const dt = Math.min(0.1, Math.max(0, now - last) / 1000); last = now;

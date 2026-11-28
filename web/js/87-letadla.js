@@ -283,7 +283,7 @@
         while (p.trail.length && now - p.trail[0].t > 15000) p.trail.shift();
       }
 
-      if (Math.hypot(p.x, p.y) > 55000) {
+      if (Math.hypot(p.x, p.y) > 55000 || (PLANES.lastFetch - p.lastSeen > 40000 && now - PLANES.lastFetch > 5000)) {   // bez zpráv (výpadek sítě) neletí dál naslepo; po návratu na kartu počká na nový dotaz
         if (PLANES.follow === id) { PLANES.follow = null; $('follow').hidden = true; }
         PLANES.list.delete(id);
       }
