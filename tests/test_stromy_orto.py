@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from nastroje.stromy_orto import jehlicnan, M, koruny_stromu, vyska
+from nastroje.stromy_orto import jehlicnan, jehlicnan_laser, M, koruny_stromu, vyska
 
 
 def koruna(img, ci, cj, r_m, rng):
@@ -53,6 +53,12 @@ class StromyOrtoTest(unittest.TestCase):
         self.assertFalse(jehlicnan(sum_([95, 88, 80])))             # holé větve listnáče nad zemí
         self.assertFalse(jehlicnan(sum_([105, 125, 70])))           # trávník pod holým stromem: zelený, ale světlý
         self.assertFalse(jehlicnan(np.zeros((0, 3))))
+
+    def test_jehlicnan_potvrdi_laser(self):
+        self.assertTrue(jehlicnan_laser(True, 3, 5))          # jehličnan s body vegetace zůstane
+        self.assertFalse(jehlicnan_laser(True, 0, 5))         # laser vidí jen zem: holý listnáč nebo stín
+        self.assertTrue(jehlicnan_laser(True, 0, 0))          # mimo laser rozhodne snímek
+        self.assertFalse(jehlicnan_laser(False, 3, 5))        # listnáč z laseru jehličnanem nebude
 
 
 if __name__ == '__main__':

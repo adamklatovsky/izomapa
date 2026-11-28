@@ -160,8 +160,9 @@ def _vyjimky(ex, tree, x0, y1, w, h):
 
 
 def _laser(geo):
-    """body vegetace (třída 5) s výškou nad terénem; terén = lineární prolnutí bodů třídy 2. -> (x, y, výška) v místních m.
-    Jen pro výšku: laser je zřejmě bez listí (v Doksech pod polovinou korun z ortofota jen body země), takže strom nevyřazuje"""
+    """body vegetace (třída 5) s výškou nad terénem; terén = lineární prolnutí bodů třídy 2.
+    -> ((x, y, výška) vegetace, (x, y) země) v místních m. Laser je zřejmě bez listí (v Doksech pod polovinou korun
+    z ortofota jen body země), takže strom nevyřazuje; jen jehličnan bez bodů vegetace vrátí na listnáč (jehlicnan_laser)"""
     import laspy
     from pyproj import Transformer
     from scipy.interpolate import LinearNDInterpolator
@@ -177,7 +178,14 @@ def _laser(geo):
     G = np.concatenate(G); V = np.concatenate(V)
     zg = LinearNDInterpolator(G[:, :2], G[:, 2])(V[:, :2])
     ok = np.isfinite(zg)
-    return np.c_[V[ok, :2], np.maximum(V[ok, 2] - zg[ok], 0)]
+    return np.c_[V[ok, :2], np.maximum(V[ok, 2] - zg[ok], 0)], G[:, :2]
+
+
+def jehlicnan_laser(con, veg, zem):
+    """jehličnan podle snímku bez listí potvrdí laser (taky bez listí): jehličnan vrátí body vegetace, holý listnáč
+    často jen zem. Jen zem (veg 0, zem > 0) -> listnáč; snímek tu plete holou korunu nad zeleným dubnovým trávníkem
+    a stín sousedních stromů s jehličnanem. Bez bodů vůbec (mimo laser) zůstane, jak řekl snímek"""
+    return con and (veg > 0 or zem == 0)
 
 
 def vyska(r, con, hl):
@@ -207,7 +215,8 @@ def main():
     print('ortofoto bez listí', rok or 'není, jehličnany jen odhadem z barvy', flush=True)
     if rok:
         for tx, ty in tiles: _soubor(geo, X0, Y1, W, H, tx, ty, wms_bl, f'build/orto_bezlisti/{rok}')
-    las = _laser(geo); kd = cKDTree(las[:, :2]) if las is not None else None
+    las, zem = _laser(geo) or (None, None)
+    kd = cKDTree(las[:, :2]) if las is not None else None; kz = cKDTree(zem) if zem is not None else None
     print('laser', 0 if las is None else len(las), 'bodů vegetace', flush=True)
     have = set(tiles); out = []
     for tx, ty in tiles:
@@ -238,6 +247,7 @@ def main():
                 k = kd.query_ball_point((x, y), max(r, 2.5))
                 if k: hl = float(las[k, 2].max())
                 if hl is not None and hl < 2.5: hl = None
+                con = jehlicnan_laser(con, len(k), len(kz.query_ball_point((x, y), max(r, 2.5))))
             lo, la = geo.to_lonlat(x, y)
             out.append([round(float(la), 6), round(float(lo), 6), vyska(r, con, hl), int(con), round(r, 1)])
         print('dlaždice', tx, ty, 'stromů', len(out), flush=True)
