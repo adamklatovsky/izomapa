@@ -54,5 +54,15 @@ for C in $CT; do
 done
 python preview.py
 python overlay.py
-cp pamatky/schvalene.json build/pamatky_vykresleno.json
+# co je v dlaždicích: po plném běhu přesně schválené, po dílčím (CTVERCE, část variant) se staré jen doplní,
+# jinak by model se zrušeným schválením z nevykreslených čtverců vypadl z výběru a zůstal v dlaždicích
+if [ -z "${CTVERCE:-}" ] && [ "$V" = "autumn winter spring summer lights" ]; then
+  cp pamatky/schvalene.json build/pamatky_vykresleno.json
+else
+  python -c "
+import json, os
+S = set(json.load(open('pamatky/schvalene.json', encoding='utf-8')))
+if os.path.exists('build/pamatky_vykresleno.json'): S |= set(json.load(open('build/pamatky_vykresleno.json', encoding='utf-8')))
+json.dump(sorted(S), open('build/pamatky_vykresleno.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)"
+fi
 echo HOTOVO pamatky

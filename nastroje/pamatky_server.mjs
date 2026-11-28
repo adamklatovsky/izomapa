@@ -24,16 +24,25 @@ http.createServer((q, r) => {
   if (u.includes('\0')) { r.writeHead(400); r.end(); return; }
   if (q.method === 'POST' && u === '/rozhodnuti') {
     if (!/^application\/json\b/.test(q.headers['content-type'] || '')) { r.writeHead(415); r.end(); return; }
-    let body = ''; q.on('data', (c) => { body += c; if (body.length > 1e5) q.destroy(); });
+    let body = ''; q.setEncoding('utf8');            // znaky rozdělené mezi kusy těla složí dekodér
+    q.on('data', (c) => { body += c; if (body.length > 1e5) q.destroy(); });
     q.on('end', () => {
+      let slug, stav, komentar;
       try {
-        const { slug, stav, komentar } = JSON.parse(body);
+        ({ slug, stav, komentar } = JSON.parse(body));
         if (!SLUG.test(String(slug)) || ![null, 'ok', 'predelat', 'pozdeji'].includes(stav ?? null)) throw new Error('neplatný slug nebo stav');
-        const all = cti(RJ, {});
-        all[slug] = { stav: stav ?? null, komentar: String(komentar || '').slice(0, 4000), kdy: new Date().toISOString() };
-        fs.writeFileSync(RJ, JSON.stringify(all, null, 1));
-        r.writeHead(200, { 'content-type': 'application/json' }); r.end('{"ok":true}');
-      } catch { r.writeHead(400); r.end(); }
+      } catch { r.writeHead(400); r.end(); return; }
+      // nečitelný soubor nepřepsat jedním záznamem (ztratila by se všechna schválení), jen chybějící je prázdný
+      let all;
+      try { all = JSON.parse(fs.readFileSync(RJ, 'utf8')); } catch (e) { all = e.code === 'ENOENT' ? {} : null; }
+      if (!all || typeof all !== 'object' || Array.isArray(all)) {
+        r.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' }); r.end(`${RJ} nejde přečíst, oprav ho ručně (nic nepřepsáno)`); return;
+      }
+      all[slug] = { stav: stav ?? null, komentar: String(komentar || '').slice(0, 4000), kdy: new Date().toISOString() };
+      try {
+        fs.writeFileSync(RJ + '.tmp', JSON.stringify(all, null, 1)); fs.renameSync(RJ + '.tmp', RJ);   // přerušený zápis nenechá půlku
+      } catch (e) { r.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' }); r.end(`zápis ${RJ} selhal: ${e.message}`); return; }
+      r.writeHead(200, { 'content-type': 'application/json' }); r.end('{"ok":true}');
     });
     return;
   }
