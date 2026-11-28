@@ -1,9 +1,9 @@
 # Vlaky podle celostátního jízdního řádu -> build/vlaky/vlaky_mhd.json, přidá je mhd.py k tramvajím a autobusům.
 # Vstup: build/vlaky/vlaky.json (nastroje/vlaky_vyber.py), koleje z data_all/segment.parquet, polohy stanic z Overture.
 # Trasa jde po kolejích mezi stanicemi na mapě; na okraj mapy se dopočítá směrem ke stanici za okrajem. Čas mezi stanicemi je rovnoměrný.
-import datetime, hashlib, json, math, os, re, sys, difflib, collections
+import datetime, hashlib, json, math, os, re, sys, collections
 sys.path.insert(0, '.')
-import numpy as np, shapely, pyarrow.parquet as pq, pyarrow.dataset as ds, pyarrow.fs as fs
+import numpy as np, shapely, pyarrow.parquet as pq, pyarrow.dataset as ds
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree

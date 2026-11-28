@@ -3,7 +3,7 @@
 # Chybějící listy DMP 1G kolem památek si stáhne sám (jako dmp_fetch.py, jen ty potřebné) do build/dmp/.
 # -> podklady-soukrome/pamatky/<slug>/laser.json: výšky nad terénem (medián, p90, p98, max) pro budovy památky a sousedy,
 #    nejvyšší body (vrcholy věží/hřebenů) po buňkách 3 m s polohou vůči středu rámu (v = na východ, s = na sever, m)
-import glob, io, json, math, os, re, sys, urllib.request, zipfile
+import glob, io, json, os, re, sys, urllib.request, zipfile
 import numpy as np, laspy, shapely
 from pyproj import Transformer
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

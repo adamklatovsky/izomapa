@@ -695,7 +695,7 @@ def deck_runs(pts):
 
 
 def deck_line(D):
-    lz, d, z = D[0], D[1], D[2]
+    lz, z = D[0], D[2]
     return [[round(x, 1), round(y, 1), round(float(h), 2)] for (x, y), h in zip(np.array(lz.coords)[:, :2], z)]
 drive_tree = shapely.STRtree([l for l, *_ in drive_lines])
 all_tree = shapely.STRtree([l for l, *_ in all_lines])

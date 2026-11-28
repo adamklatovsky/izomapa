@@ -22,7 +22,7 @@ Kontroluje se rozdíl proti `upstream/main` (nebo `origin/main`): `git diff upst
 6. **Render.** Změna `prep.py` nemá bez důvodu měnit scénu: `prep.py` je deterministický, porovnej
    `build/c<i>_<j>/scene.json` před a po na postaveném čtverci. Změna `render.html` znamená nový render celé mapy
    u všech uživatelů (otisk renderu) – má to být v popisu PR.
-7. **Testy a návod.** `./tests/run.sh` projde. Nová volba v `mesto.json` nebo nový nástroj je popsaný v `CLAUDE.md`
+7. **Testy a návod.** `./tests/run.sh` a `ruff check .` projdou. Nová volba v `mesto.json` nebo nový nástroj je popsaný v `CLAUDE.md`
    (sekce „Co ladit a jak“) a případně v README.
 8. **Rozsah.** Jedno téma na PR, malý diff. Název česky ve stylu repa („Oprava: …“, „Letadla: …“), v popisu co a proč,
    jak je to ověřené a co ověřené není.
