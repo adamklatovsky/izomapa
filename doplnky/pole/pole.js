@@ -14,6 +14,16 @@
   const SUNV = (() => { const v = [0.38, -0.68, 0.62], n = Math.hypot(...v); return v.map((q) => q / n); })();
   const lit = (rgb, d) => { const f = (0.62 + 0.42 * Math.max(0, d)) / 0.88; return `rgb(${rgb.map((q) => Math.min(255, Math.round(q * f))).join(',')})`; };
   const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  // posun Europe/Prague proti UTC v sekundách (rozpis prací je podle pražského času, ne podle pásma prohlížeče); jednou za minutu
+  const PRG = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Prague', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  let offT = -1e15, off = 0;
+  const pragueOff = (t) => {
+    if (Math.abs(t - offT) > 60000) {
+      const p = Object.fromEntries(PRG.formatToParts(new Date(t)).map((q) => [q.type, +q.value]));
+      offT = t; off = Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - t) / 1000);
+    }
+    return off;
+  };
   const layerOn = (id) => { const e = document.getElementById(id); return !e || e.checked; };
   const DK = [40, 40, 42], GL = [70, 92, 112], STEEL = [150, 152, 156];
   const TRACTOR = [[54, 132, 56], [196, 42, 32]], COMBINE = [[120, 170, 60], [196, 42, 32]];
@@ -72,6 +82,7 @@
     onInit(api) {
       const D = api.getPluginData(ID);
       if (!D || !(D.pole || []).length && !(D.louky || []).length) return;
+      api.addTrees?.(D.stromy);                               // stromy na polích a u nich: ořez stopy (drawGround) i strojů
       const toImg = api.toImg, gz = api.gz, W = (q) => api.latLonToWorld(q[0], q[1]);
 
       // pole ve světových souřadnicích; osa a = delší strana nejmenšího opsaného obdélníku (jako řádky v prep.py)
@@ -172,32 +183,47 @@
         const spr = { c: cv, x0, y0 }; SPR.set(key, spr); return spr;
       }
 
-      // stopa: hotové pruhy jako jeden pás přes celé pole + rozjetý pruh po stroj, ořez obrysem pole
-      function trail(ctx, view, F, J, P, d) {
-        const { sx, ox, oy } = view, S = (x, y) => { const p = toImg(x, y, gz(x, y)); return [ox + p[0] * sx, oy + p[1] * sx]; };
-        if (!F.ringZ) F.ringZ = F.ring.map((r) => r.map(([x, y]) => [x, y, gz(x, y)]));
+      // stopa: hotové pruhy jako jeden pás přes celé pole + rozjetý pruh po stroj, ořez obrysem pole; kreslí se do pomocného
+      // plátna (výřez obrazovky s polem) a to se vykreslí přes drawGround, které z ní vyřízne stromy a domy (remízky, stromy na kraji)
+      const trC = document.createElement('canvas'), trG = trC.getContext('2d');
+      function trail(view, F, J, P, d) {
+        const { sx, ox, oy, cw, ch } = view, S = (x, y) => { const p = toImg(x, y, gz(x, y)); return [ox + p[0] * sx, oy + p[1] * sx]; };
+        if (!F.ringZ) {
+          F.ringZ = F.ring.map((r) => r.map(([x, y]) => [x, y, gz(x, y)]));
+          const o = F.R[0]; F.bb = [Math.min(...o.map((p) => p[0])), Math.min(...o.map((p) => p[1])), Math.max(...o.map((p) => p[0])), Math.max(...o.map((p) => p[1]))];
+        }
+        const scr = F.ringZ.map((r) => r.map(([x, y, z]) => { const p = toImg(x, y, z); return [ox + p[0] * sx, oy + p[1] * sx]; }));
+        let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
+        for (const r of scr) for (const [X, Y] of r) { x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y); }
+        const X0 = Math.max(0, Math.floor(x0) - 1), Y0 = Math.max(0, Math.floor(y0) - 1);
+        const w = Math.min(Math.ceil(cw), Math.ceil(x1) + 1) - X0, h = Math.min(Math.ceil(ch), Math.ceil(y1) + 1) - Y0;
+        if (w <= 0 || h <= 0) return;
+        // rozměr po 128 px, aby se plátno nepřealokovalo každý snímek; přebytek je průhledný a kreslí se s ním
+        const PW = Math.ceil(w / 128) * 128, PH = Math.ceil(h / 128) * 128, g = trG;
+        if (trC.width !== PW || trC.height !== PH) { trC.width = PW; trC.height = PH; } else g.clearRect(0, 0, PW, PH);
         const band = (ua, ub, va, vb) => {                  // obdélník v osách pole, strany po 10 m
           const pts = [], n = Math.max(1, Math.ceil((ub - ua) / 10)), m = Math.max(1, Math.ceil((vb - va) / 10));
           for (let j = 0; j <= n; j++) pts.push([ua + (ub - ua) * j / n, va]);
           for (let j = 1; j <= m; j++) pts.push([ub, va + (vb - va) * j / m]);
           for (let j = n - 1; j >= 0; j--) pts.push([ua + (ub - ua) * j / n, vb]);
           for (let j = m - 1; j > 0; j--) pts.push([ua, va + (vb - va) * j / m]);
-          ctx.moveTo(...S(...F.toW(...pts[0]))); for (const p of pts.slice(1)) ctx.lineTo(...S(...F.toW(...p))); ctx.closePath();
+          g.moveTo(...S(...F.toW(...pts[0]))); for (const p of pts.slice(1)) g.lineTo(...S(...F.toW(...p))); g.closePath();
         };
-        ctx.save(); ctx.beginPath();
-        for (const r of F.ringZ) r.forEach(([x, y, z], k) => { const p = toImg(x, y, z), X = ox + p[0] * sx, Y = oy + p[1] * sx; k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
-        ctx.clip('evenodd');
-        ctx.fillStyle = J.trail; ctx.beginPath();
-        const g = d >= P.L ? null : at(F, P, d).g, done = d >= P.L ? F.v1 : g.k >= 0 ? g.a[1] - J.w / 2 : g.a[1] + J.w / 2;
+        g.save(); g.setTransform(1, 0, 0, 1, -X0, -Y0); g.beginPath();
+        for (const r of scr) r.forEach(([X, Y], k) => (k ? g.lineTo(X, Y) : g.moveTo(X, Y)));
+        g.clip('evenodd');
+        g.fillStyle = J.trail; g.beginPath();
+        const gs = d >= P.L ? null : at(F, P, d).g, done = d >= P.L ? F.v1 : gs.k >= 0 ? gs.a[1] - J.w / 2 : gs.a[1] + J.w / 2;
         if (done > F.v0) band(F.u0 - 5, F.u1 + 5, F.v0 - 5, done);
-        if (g && g.k >= 0) { const u = at(F, P, d).u; band(Math.min(g.a[0], u) - (g.dir > 0 ? 5 : 0), Math.max(g.a[0], u) + (g.dir < 0 ? 5 : 0), g.a[1] - J.w / 2, g.a[1] + J.w / 2); }
-        ctx.fill(); ctx.restore();
+        if (gs && gs.k >= 0) { const u = at(F, P, d).u; band(Math.min(gs.a[0], u) - (gs.dir > 0 ? 5 : 0), Math.max(gs.a[0], u) + (gs.dir < 0 ? 5 : 0), gs.a[1] - J.w / 2, gs.a[1] + J.w / 2); }
+        g.fill(); g.restore();
+        api.drawGround(trC, (X0 - ox) / sx, (Y0 - oy) / sx, PW / sx, PH / sx, F.bb, view);
       }
 
       const draws = [];
       unsub = api.onFrame((ctx, view) => {
         if (view.season === 'winter' || view.night > 0.45 || view.weather === 'rain' || view.weather === 'snow' || view.snowy || !layerOn('l-traffic')) return;
-        const { sx, ox, oy } = view, now = Date.now(), loc = now / 1000 - new Date(now).getTimezoneOffset() * 60;
+        const { sx, ox, oy } = view, now = Date.now(), loc = now / 1000 + pragueOff(now);
         const day = Math.floor(loc / 86400), sec = Math.min(loc - day * 86400, 20 * 3600);
         const { slots } = schedule(view.season, day);
         draws.length = 0;
@@ -207,12 +233,12 @@
           for (const e of sl.chain) {                         // pole v řetězu postupně; mezi nimi 20 min přejezd
             const J = JOBS[e.j], P = plan(e.F, J.w), t = P.L / J.v;
             const vis = view.vis(...toImg(e.F.mid[0], e.F.mid[1], 0), e.F.rad / 0.2 * sx + 50);
-            if (d >= t) { if (vis) trail(ctx, view, e.F, J, P, P.L); d -= t + 1200; if (d < 0) break; continue; }
+            if (d >= t) { if (vis) trail(view, e.F, J, P, P.L); d -= t + 1200; if (d < 0) break; continue; }
             cur = { e, J, P, dist: d * J.v, vis }; break;
           }
           if (!cur) continue;
           const { e, J, P, dist, vis } = cur;
-          if (vis) trail(ctx, view, e.F, J, P, dist);
+          if (vis) trail(view, e.F, J, P, dist);
           if (sx <= 0.12 || !vis) continue;
           const p = at(e.F, P, dist), off = J.w / 2 + 3.2, side = p.v - off < e.F.v0 ? 1 : -1, sd = side * (p.g.dir ?? 1), kind = e.j;   // vlek po sklizené straně, v prvním pruhu po nesklizené (jinak by jel mimo pole)
           draws.push({ x: p.x, y: p.y, h: p.h, kind, c: (J.komb ? COMBINE : TRACTOR)[sl.c], sd: J.komb ? sd : 1, dust: J.komb, d: dist });

@@ -40,6 +40,10 @@
       return true;
     },
     drawOccluded: (img, ix, iy, iw, ih, x, y, z, view) => drawBehindTrees(img, ix, iy, iw, ih, x, y, z, view.sx, view.ox, view.oy),   // obrázek v pixelech mapy, ořízne ho, co je před bodem (x, y, z)
+    drawGround(img, ix, iy, iw, ih, bbox, view) {                        // plocha ležící na terénu (stopa, skvrna) v pixelech mapy, oříznutá stromy a domy, které na ní stojí nebo před ní; bbox = [x0, y0, x1, y1] plochy v m
+      const c = (v, d) => Math.floor(v / 16) + d;                        // buňky stromů +-2 (32 m) kolem plochy: korunu přes ni může mít i strom stojící vedle
+      drawBehindTrees(img, ix, iy, iw, ih, 0, 0, 0, view.sx, view.ox, view.oy, [c(bbox[0], -2), c(bbox[1], -2), c(bbox[2], 2), c(bbox[3], 2)]);
+    },
     addTrees(list) {                                                     // stromy [x, y, z, výška, jehličnan, druh] (jako trees v datech čtverce) navíc pro occluded a drawOccluded
       for (const t of list || []) {
         const q = tgk(t[0], t[1]); if (!TG.has(q)) TG.set(q, []);

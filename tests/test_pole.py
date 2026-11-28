@@ -23,6 +23,19 @@ def obdelnik(x0, y0, w, h, n=1):                # [lat, lon] obdélník w × h m
 
 
 class HookTest(unittest.TestCase):
+    def test_stromy_u_poli(self):
+        from shapely.geometry import box
+        # čtverec se středem (0, 0), half 100; pole -40..60 × -20..20
+        trees = [[10, 0, 1, 8, 0, 0],      # na poli (remízek)
+                 [-45, -8, 1, 8, 0, 0],    # 5 m západně od pole (před ním)
+                 [-5, -32, 1, 8, 0, 0],    # 12 m jižně (před polem)
+                 [70, 0, 1, 8, 0, 0],      # 10 m východně, korunu přes pole nemá, ne
+                 [30, 32, 1, 8, 0, 0],     # 12 m severně (za polem), ne
+                 [15, 5, 1, 8, 0, 2],      # druh 2, ne
+                 [-110, 0, 1, 8, 0, 0]]    # mimo vlastní čtverec (pás souseda), ne
+        out = hook.stromy_u_poli([box(-40, -20, 60, 20)], [(0, 0, 100, trees)])
+        self.assertEqual([t[:2] for t in out], [[10, 0], [-45, -8], [-5, -32]])
+
     def test_bez_konfigurace_nebo_dat_se_vypne(self):
         with tempfile.TemporaryDirectory() as d:
             ctx = {'data_file': Path(d) / 'doplnky' / 'pole.json', 'assets_dir': Path(d)}

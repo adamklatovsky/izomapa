@@ -60,6 +60,29 @@ def postav(raw: dict[str, Any], zab: dict[str, Any], to_local: Callable[[float, 
     return {'pole': pole, 'louky': louky, 'stroje': int(raw.get('stroje', 5))}
 
 
+def stromy_u_poli(polygony: list, scene_trees, okraj: float = 15.0) -> list[list]:
+    """Stromy ze scén čtverců na polích a do `okraj` m od nich k jihozápadu (remízky, stromy na kraji), aby jimi prohlížeč ořízl
+    stopu. Pohled je od jihozápadu: korunu přes pole má jen strom na něm nebo před ním, stromy za polem by jen zvětšily data
+    (v Doksech 22 500 stromů v pásu kolem polí, z toho 13 700 na poli a před ním).
+    polygony = shapely polygony polí v m, scene_trees = [(ox, oy, half, stromy čtverce v jeho souřadnicích)]."""
+    import shapely
+    from shapely.affinity import translate
+    d = okraj / 2 ** 0.5                                   # posun po úhlopříčce k jihozápadu po krocích 5 m, kolem 3 m rezerva
+    n = max(1, int(okraj // 5))
+    oblast = shapely.union_all([translate(P, -d * k / n, -d * k / n) for P in polygony for k in range(n + 1)]).buffer(3)
+    if oblast.is_empty:
+        return []
+    shapely.prepare(oblast)
+    out = []
+    for ox, oy, half, trees in scene_trees:
+        for t in trees:
+            if (len(t) > 5 and t[5] == 2) or abs(t[0]) > half or abs(t[1]) > half:   # druh 2 se nekreslí, pás sousedů má soused sám
+                continue
+            if oblast.contains(shapely.Point(t[0] + ox, t[1] + oy)):
+                out.append([round(t[0] + ox, 2), round(t[1] + oy, 2), round(t[2], 1), t[3], t[4], t[5] if len(t) > 5 else 0])
+    return out
+
+
 def build_overlay(ctx: dict[str, Any]) -> dict[str, Any] | bool:
     f, z = ctx['data_file'], ctx['assets_dir'] / 'zabaged.json'
     if not f.is_file() or not z.is_file():
@@ -74,4 +97,17 @@ def build_overlay(ctx: dict[str, Any]) -> dict[str, Any] | bool:
     mapa = unary_union([box(i * 2 * H - H, j * 2 * H - H, i * 2 * H + H, j * 2 * H + H) for i, j in geo.CHUNKS])
     out = postav(raw, json.loads(z.read_text(encoding='utf-8')), lambda la, lo: tuple(float(v) for v in geo.to_local(lo, la)),
                  lambda x, y: tuple(float(v) for v in geo.to_lonlat(x, y))[::-1], mapa)
-    return out if out['pole'] or out['louky'] else False
+    if not out['pole'] and not out['louky']:
+        return False
+    if ctx.get('build_dir'):
+        from pathlib import Path
+        from shapely.geometry import Polygon
+        to_xy = lambda q: [geo.to_local(lo, la) for la, lo in q]
+        polys = [Polygon(to_xy(P['q'][0]), [to_xy(r) for r in P['q'][1:]]) for P in out['pole'] + out['louky']]
+        sc = []
+        for c in geo.CHUNKS:
+            f = Path(geo.chunk_dir(c), 'scene.json')
+            if f.is_file():
+                sc.append((*geo.chunk_center(c), H, json.loads(f.read_text(encoding='utf-8'))['trees']))
+        out['stromy'] = stromy_u_poli(polys, sc)
+    return out
