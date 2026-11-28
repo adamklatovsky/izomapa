@@ -25,7 +25,8 @@ const BG = LIGHTS ? [0, 0, 0] : [27 / 255, 35 / 255, 51 / 255];
 const SKIRT = 28;
 
 const scene = await (await fetch(`${DIR}/scene.json`)).json();
-const CUSTOM = await import('./assets/custom_models.js').catch(() => ({}));
+// chybí soubor = žádné vlastní modely; chyba v něm (syntaxe, výjimka) shodí render, jinak by modely tiše zmizely a otisk se uložil
+const CUSTOM = (await fetch('./assets/custom_models.js', { method: 'HEAD' })).status === 404 ? {} : await import('./assets/custom_models.js');
 const HALF = scene.half, N = scene.n, HS = scene.heights;
 if (!PARAMS.skirt && scene.skirt !== undefined) SKIRT_EDGES = scene.skirt;
 const FLOOR = scene.floor ?? -SKIRT;                 // spodek řezu zeminou (společný pro všechny čtverce)
@@ -413,20 +414,22 @@ function roofDeco(b, X, eave, rc) {
 // seznam, ?jen=1 skryje ostatní budovy. Chyby modelu jdou do konzole a window.PAM_LOG, počty trojúhelníků a vršky do window.PAM_STATS.
 const PAM = [];
 let PAM_KIT = null;
+// běžný render dlaždic (jen schválené): chyba v kódu modelu render shodí, jinak by památka v mapě tiše chyběla a otisk se uložil
+const PAM_PRISNE = !PARAMS.pam && !PARAMS.pamatka && !PARAMS.pamextra;
 window.PAM_LOG = []; window.PAM_STATS = {};
 if (PARAMS.pam !== '0') {
   const vse = PARAMS.pam === 'vse' || !!PARAMS.pamatka;
   const list = [...new Set([...(await fetch(vse ? 'pamatky/seznam.json' : 'pamatky/schvalene.json').then((r) => (r.ok ? r.json() : [])).catch(() => [])),
     ...(PARAMS.pamextra ? PARAMS.pamextra.split(',') : [])])];
   const only = PARAMS.pamatka ? new Set(PARAMS.pamatka.split(',')) : null, V = PARAMS.v || Date.now();
-  if (list.length) try { PAM_KIT = (await import(`./pamatky/_kit.js?v=${V}`)).makeKit; } catch (e) { window.PAM_LOG.push(`_kit.js: ${e.message}`); }
+  if (list.length) try { PAM_KIT = (await import(`./pamatky/_kit.js?v=${V}`)).makeKit; } catch (e) { window.PAM_LOG.push(`_kit.js: ${e.message}`); if (PAM_PRISNE) throw e; }
   for (const s of PAM_KIT ? list : []) {
     if (only && !only.has(s)) continue;
     if (!/^[a-z0-9-]{1,40}$/.test(s)) { window.PAM_LOG.push(`${s}: neplatný název (jen a–z, 0–9, pomlčka)`); continue; }
     let d; try { d = await fetch(`pamatky/${s}.json?v=${V}`).then((r) => r.json()); } catch (e) { window.PAM_LOG.push(`${s}.json: ${e.message}`); continue; }
     const dosah = (d.budovy || []).length ? HE + 120 : HE;           // samostatná stavba (sloup) jen uvnitř výřezu
     if (!d.ram || !d.bod || Math.abs(d.bod[0] - OFFX) > dosah || Math.abs(d.bod[1] - OFFY) > dosah) continue;   // mimo tento čtverec
-    let fn; try { fn = (await import(`./pamatky/${s}.js?v=${V}`)).default; } catch (e) { window.PAM_LOG.push(`${s}.js: ${e.message}`); console.log('PAMATKA CHYBA', s, e.message); continue; }
+    let fn; try { fn = (await import(`./pamatky/${s}.js?v=${V}`)).default; } catch (e) { window.PAM_LOG.push(`${s}.js: ${e.message}`); console.log('PAMATKA CHYBA', s, e.message); if (PAM_PRISNE) throw e; continue; }
     PAM.push({ s, d, fn, kus: [], rings: (d.budovy || []).map((q) => q.ring.map(([x, y]) => [x - OFFX, y - OFFY])) });
   }
   // vnitřní bod budovy: těžiště největšího trojúhelníku z triangulace půdorysu
@@ -465,7 +468,7 @@ function pamModely(W, R, X) {
       budovy: kus.map((b) => ({ p: b.p, g: b.g, b: b.b, e: b.e, r: b.r, rh: b.rh, wc: b.wc, rc: b.rc, parts: b.parts, s: b.s, tw: b.tw })) };
     const n0 = W.p.length + R.p.length + X.p.length, z0 = [W.p.length, R.p.length, X.p.length];
     try { q.fn(M, PAM_KIT({ THREE, W, R, X, pushTri, vyska: pamVyska, sezona: SEASON, noc: LIGHTS, stromy: scene.trees }, M)); }
-    catch (e) { window.PAM_LOG.push(`${q.s}: ${e.stack || e.message}`); console.log('PAMATKA CHYBA', q.s, e.stack || e.message); }
+    catch (e) { window.PAM_LOG.push(`${q.s}: ${e.stack || e.message}`); console.log('PAMATKA CHYBA', q.s, e.stack || e.message); if (PAM_PRISNE) throw e; }
     // skutečný vršek a obálka modelu (pro obrys při najetí myší: pamatky/pred_po.mjs -> pamatky/vrsky.json -> prep.py)
     let top = -1e9, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     [W, R, X].forEach((B, k) => { for (let i = z0[k]; i < B.p.length; i += 3) { const x = B.p[i], z = B.p[i + 1], y = -B.p[i + 2]; if (z > top) top = z; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } });

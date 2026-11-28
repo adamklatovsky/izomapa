@@ -7,7 +7,6 @@ set -e
 cd "$(dirname "$0")"
 if [ -f .venv/bin/activate ]; then . .venv/bin/activate; else . .venv/Scripts/activate; fi   # Windows: Scripts
 export PYTHONUTF8=1   # Windows: soubory a výpisy v UTF-8 (jinak padá na češtině)
-CH=$(python -c "import geo; print(' '.join(f'{i},{j}' for i, j in sorted(geo.CHUNKS)))")
 
 if [ "$1" != render ]; then
   python fetch_data.py --vse                                  # Overture (OSM) + terén, místa, části obce
@@ -23,7 +22,7 @@ mkdir -p site/tiles
 for s in summer autumn winter spring; do node render.mjs mpp=0.2 dir=build season=$s alpha=1 stromy=site/stromy > /dev/null; done   # kresby stromů: auta se schovají přesně za ně (vždy 0,2 m/px jako animace prohlížeče, i u detailního rozlišení)
 python preview.py
 python overlay.py
-python mhd.py || true                                         # jízdní řády jen když je v mesto.json mhd.gtfs
+python mhd.py || { echo "CHYBA: MHD (mhd.py, viz výpis výše); bez MHD smaž mhd.gtfs z mesto.json"; exit 1; }   # jízdní řády jen když je v mesto.json mhd.gtfs
 python set_status.py hotovo
 python build_html.py
 echo "Hotovo. Náhled: npm run nahled  a otevři http://localhost:8000"

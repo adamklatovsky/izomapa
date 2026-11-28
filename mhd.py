@@ -15,11 +15,17 @@ from nastroje.gtfs_casy import cekani_na_konecne, dopln_mezicasy
 from geo import CHUNKS, HALF, MESTO, chunk_center, to_local
 
 URL = (MESTO.get('mhd') or {}).get('gtfs')
-if not URL: sys.exit('mesto.json nemá mhd.gtfs – MHD se vynechá')
+if not URL: print('mesto.json nemá mhd.gtfs – MHD se vynechá'); sys.exit()
 Z = 'build/gtfs.zip'
 if '--stahnout' in sys.argv or not os.path.exists(Z) or time.time() - os.path.getmtime(Z) > 86400:
-    subprocess.run(['curl', '-sL', '-m', '120', '-o', Z + '.tmp', URL], check=True)
-    zipfile.ZipFile(Z + '.tmp').testzip(); os.replace(Z + '.tmp', Z)
+    try:
+        subprocess.run(['curl', '-sL', '-m', '120', '-o', Z + '.tmp', URL], check=True)
+        if zipfile.ZipFile(Z + '.tmp').testzip(): raise zipfile.BadZipFile('poškozený soubor v zipu')
+        os.replace(Z + '.tmp', Z)
+    except (subprocess.CalledProcessError, zipfile.BadZipFile, OSError) as e:
+        if not os.path.exists(Z): raise
+        # výpadek dopravce nemá shodit stavbu: starší jízdní řád je lepší než žádný
+        print(f'VAROVÁNÍ: GTFS se nepodařilo stáhnout ({e}), beru starý {Z} z {time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(Z)))}')
 zf = zipfile.ZipFile(Z)
 T = lambda n: (csv.DictReader(io.TextIOWrapper(zf.open(n + '.txt'), encoding='utf-8-sig')))
 sec = lambda t: (lambda h, m, s: h * 3600 + m * 60 + s)(*map(int, t.split(':')))
@@ -38,7 +44,7 @@ if 'shapes.txt' in zf.namelist():
     used = {t['shape_id'] for t in trips}
     pts = {}
     for r in T('shapes'):
-        if r['shape_id'] in used: pts.setdefault(r['shape_id'], []).append((int(r['shape_pt_sequence']), float(r['shape_pt_lon']), float(r['shape_pt_lat']), float(r['shape_dist_traveled'] or 0)))
+        if r['shape_id'] in used: pts.setdefault(r['shape_id'], []).append((int(r['shape_pt_sequence']), float(r['shape_pt_lon']), float(r['shape_pt_lat']), float(r.get('shape_dist_traveled') or 0)))
     # autobusové trasy na silnici (nastroje/trasy_na_silnici.py): tvary dopravce vedou k zastávkám na chodník a kousek vedle osy
     BUS = {t['shape_id'] for t in trips if KIND(int(RT[t['route_id']]['route_type'] or 3)) == 3}
     SIL = None
@@ -53,6 +59,7 @@ if 'shapes.txt' in zf.namelist():
         if SIL and k in BUS: l = shapely.LineString(SIL.uprav(list(l.coords)))
         SI[k] = len(shapes); SLEN[k] = (l.length, v[-1][3] or 1.0)
         shapes.append([[round(a, 1), round(b, 1)] for a, b in shapely.simplify(l, 1.0).coords])
+    if any(not pts[k][-1][3] for k in SI): print('VAROVÁNÍ: shapes.txt bez shape_dist_traveled – vozidla na těch trasách budou stát na začátku')
     trips = [t for t in trips if t['shape_id'] in SI]
 TI = {t['trip_id'] for t in trips}
 st = {}
@@ -87,11 +94,11 @@ routes, RI = [], {}
 for rid in dict.fromkeys(t['route_id'] for t in trips):
     RI[rid] = len(routes); routes.append([RT[rid]['route_short_name'], KIND(int(RT[rid]['route_type'] or 3))])
 services = {}
-for c in T('calendar'):
+for c in T('calendar') if 'calendar.txt' in zf.namelist() else []:      # GTFS smí mít jen jeden z obou kalendářů
     if c['service_id'] not in SV: continue
     services[c['service_id']] = [[int(c[d]) for d in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')],
                                  int(c['start_date']), int(c['end_date']), [], []]
-for c in T('calendar_dates'):
+for c in T('calendar_dates') if 'calendar_dates.txt' in zf.namelist() else []:
     if c['service_id'] not in SV: continue
     s = services.setdefault(c['service_id'], [[0] * 7, 0, 0, [], []])
     s[3 if c['exception_type'] == '1' else 4].append(int(c['date']))
@@ -124,7 +131,7 @@ for t in trips:
         seq += [a - t0, round(dist * k)]
         if d > a: seq += [d - t0, round(dist * k)]              # pobyt v zastávce
         zs += [nid(nm), a - t0]
-    out.append([RI[t['route_id']], SI[t['shape_id']], t['service_id'], t0, seq, nid(t['trip_headsign'] or s[-1][4] or ''), zs])
+    out.append([RI[t['route_id']], SI[t['shape_id']], t['service_id'], t0, seq, nid(t.get('trip_headsign') or s[-1][4] or ''), zs])
 # čekání na konečné (q[7] = s do odjezdu, kdy vůz už stojí na první zastávce): GTFS čekání nezná, spoj začíná až odjezdem
 print('spojů s čekáním na konečné', cekani_na_konecne(out, lambda q: routes[q[0]][1]))
 out.sort(key=lambda q: q[3])
