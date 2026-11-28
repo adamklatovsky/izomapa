@@ -60,6 +60,8 @@ OBL = json.load(open('assets/oblasti.json', encoding='utf-8')) if os.path.exists
 for _o in OBL.values():
     for _k, _v in list(_o['b_auto'].items()) + list(_o['b'].items()): SAT['b'][_k] = {**SAT['b'].get(_k, {}), **_v}
 HREBENY = json.load(open('assets/hrebeny.json', encoding='utf-8')) if os.path.exists('assets/hrebeny.json') else {}   # nastroje/hrebeny.py
+# tvar střechy z laseru (nastroje/tvary_strech.py): id -> [tvar, sklon °, [[lon, lat, úhel hřebene °, délka, šířka], …]], jen jisté
+TVARY = json.load(open('assets/tvary_strech.json', encoding='utf-8')) if os.path.exists('assets/tvary_strech.json') else {}
 # změřené výšky z DMP 1G (ČÚZK, CC BY 4.0): id -> [medián, p90] nad terénem. Nerozhodují o typu ani tvaru střechy, jen o výšce
 DMP = json.load(open('assets/dmp_vysky.json', encoding='utf-8')) if os.path.exists('assets/dmp_vysky.json') else {}
 if os.path.exists('assets/dmp_rucne.json'): DMP.update({k: v for k, v in json.load(open('assets/dmp_rucne.json', encoding='utf-8')).items() if not k.startswith('_')})   # ověřená měření z kontrolního seznamu
@@ -1283,6 +1285,9 @@ for _, r in bld.iterrows():
             if c in FLAT_CLS or area > 650: rs = 'flat'
             elif c in PITCHED_CLS or (not c and 25 < area < 400): rs = 'gabled' if h01(key) < 0.62 else 'hipped'
             else: rs = 'flat'
+        # tvar z laseru má přednost před odhadem (náhoda, snímek), ne před OSM, dominantou a ruční úpravou
+        tv = TVARY.get(r.id) if not lm and not panel and c != 'roof' and not ROOF_MAP.get(r.roof_shape if isinstance(r.roof_shape, str) else '') else None
+        if tv: rs = tv[0]; tenement = tenement and rs != 'flat'
         if not lm and so.get('r'): rs = so['r']; tenement = panel = False
         obb = p.minimum_rotated_rectangle
         oc = list(obb.exterior.coords)[:4]
@@ -1295,6 +1300,8 @@ for _, r in bld.iterrows():
         if rs != 'flat':
             parts = [[round(obb.centroid.x, 2), round(obb.centroid.y, 2), round(ang, 4), round(L, 2), round(Wd, 2)]] \
                 if area / max(obb.area, 1) > 0.9 else roof_parts(p, ang)
+            if tv and rs == tv[0] and tv[2]:              # díly a směry hřebenů změřené laserem (dům do L, T, hřeben podél kratší strany)
+                parts = [[*(round(float(v), 2) for v in to_local(lon, lat)), round(math.radians(u), 4), dl, sr] for lon, lat, u, dl, sr in tv[2]]
             if not parts: rs = 'flat'
         roofh = min(max(pp[4] for pp in parts) / 2 * math.tan(math.radians(40)), 7.0) if parts else 0.0
         if tenement:
