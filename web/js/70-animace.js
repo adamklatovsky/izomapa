@@ -329,14 +329,16 @@
   // MHD podle jízdních řádů GTFS (site/mhd.json z mhd.py): poloha každého spoje podle skutečného času
   const MHD = { on: false, act: [], t: -1, drawn: [], follow: null };
   // bez GTFS v mesto.json se mhd.json nevyrábí: nežádat o něj (jinak chyba 404 v konzoli)
-  if ({{MHD}}) fetch('mhd.json' + VER).then((r) => r.json()).then((m) => {
+  let mhdWait = 30e3;                                       // po výpadku sítě zkusit znovu, odstup se zdvojuje až na 10 min
+  const mhdLoad = () => fetch('mhd.json' + VER).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((m) => {
     m.shapes = m.shapes.map((w) => { const len = [0]; for (let i = 1; i < w.length; i++) len.push(len[i - 1] + Math.hypot(w[i][0] - w[i - 1][0], w[i][1] - w[i - 1][1])); return { w, len, L: len[len.length - 1] }; });
     m.dur = m.trips.map((t) => t[4][t[4].length - 2]);
     m.maxDur = m.dur.reduce((x, d) => Math.max(x, d), 0);   // ne Math.max(...): u velkého GTFS přeteče zásobník
     m.maxWait = m.trips.reduce((x, t) => Math.max(x, t[7] || 0), 0);   // čekání na konečné před odjezdem (mhd.py)
     Object.assign(MHD, m, { on: true });
     stopsReady();
-  }).catch(() => {});
+  }, () => { setTimeout(mhdLoad, mhdWait); mhdWait = Math.min(mhdWait * 2, 600e3); });
+  if ({{MHD}}) mhdLoad();
   const pragueNow = () => {                                // datum, den v týdnu (po = 0) a sekundy od půlnoci (čas v Česku)
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short', hour12: false })
       .formatToParts(new Date()).map((q) => [q.type, q.value]));
@@ -351,11 +353,13 @@
     }
     return on;
   }
+  function mhdDay(d, wd) {                                 // striktně podle platnosti; prošlý jízdní řád: aspoň podle dne v týdnu
+    const on = mhdServices(d, wd, true);
+    return MHD.trips.some((t) => on.has(t[2])) ? on : mhdServices(d, wd, false);
+  }
   function mhdActive() {                                   // jedoucí spoje (dnešní i ty, co vyjely včera před půlnocí)
     const n = pragueNow();
-    let today = mhdServices(n.d, n.wd, true);
-    if (!MHD.trips.some((t) => today.has(t[2]))) today = mhdServices(n.d, n.wd, false);   // prošlý jízdní řád: aspoň podle dne v týdnu
-    const yest = mhdServices(ymd(n.d, -1), (n.wd + 6) % 7, false), out = [];
+    const today = mhdDay(n.d, n.wd), yest = mhdDay(ymd(n.d, -1), (n.wd + 6) % 7), out = [];
     for (const [svc, t] of [[today, n.s], [yest, n.s + 86400]]) {
       const T = MHD.trips; let lo = 0, hi = T.length;
       while (lo < hi) { const m = (lo + hi) >> 1; if (T[m][3] < t - MHD.maxDur) lo = m + 1; else hi = m; }
@@ -420,9 +424,7 @@
   }
   function stopDepartures(nid) {                             // [s do odjezdu, spoj] na hodinu dopředu (bez cílové zastávky spoje), i noční spoje po půlnoci
     const p = pragueNow();
-    let today = mhdServices(p.d, p.wd, true);
-    if (!MHD.trips.some((t) => today.has(t[2]))) today = mhdServices(p.d, p.wd, false);
-    const yest = mhdServices(ymd(p.d, -1), (p.wd + 6) % 7, false), tom = mhdServices(ymd(p.d, 1), (p.wd + 1) % 7, false), out = [];
+    const today = mhdDay(p.d, p.wd), yest = mhdDay(ymd(p.d, -1), (p.wd + 6) % 7), tom = mhdDay(ymd(p.d, 1), (p.wd + 1) % 7), out = [];
     for (const [svc, base] of [[today, 0], [yest, -86400], [tom, 86400]]) for (const t of MHD.trips) {
       if (!svc.has(t[2]) || MHD.routes[t[0]][1] === 2) continue;
       const z = t[6];
