@@ -5,6 +5,7 @@
 set -e
 C=$1; shift; V=${*:-"autumn winter spring summer lights"}
 if [ "$C" = "0,0" ]; then D=build; else D=build/c$(echo $C | tr ',' '_'); fi
+# kotva mřížky pixelů (render.html PARAMS.gx0/gy1): hodnota (z Liberce) je libovolná, jen musí být stejná pro všechny čtverce a rendery; změna posune mřížku proti hotovým dlaždicím
 G="gx0=-1646.34559672906 gy1=988.7958500237901"
 for s in $V; do
   # výstup do logu a kontrola návratového kódu node (dřív rozhodoval grep a pád renderu prošel jako HOTOVO)
