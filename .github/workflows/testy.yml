@@ -1,0 +1,29 @@
+# Testy a kontrola chyb v Pythonu u každého pull requestu a pushe do main (stejné příkazy jako lokálně, viz CLAUDE.md)
+name: testy
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  testy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Závislosti (jako setup.sh, bez Chromia)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -q shapely pyproj numpy pillow pyarrow pandas scipy "laspy[lazrs]" ruff==0.14.13
+          npm install --omit=dev --ignore-scripts
+      - name: ruff check
+        run: .venv/bin/ruff check .
+      - name: Testy
+        run: ./tests/run.sh

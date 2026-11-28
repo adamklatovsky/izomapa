@@ -1,10 +1,9 @@
 # změří budovy z mračna bodů DMP 1G (body tříd 2 terén, 6 budova): python dmp_vysky.py  (po dmp_fetch.py)
 # build/dmp_vysky.json: id -> [plocha, bodů, medián nad terénem, p90 nad terénem, patra OSM, výška v datech, typ, lat, lon]
 # assets/dmp_vysky.json: id -> [medián, p90] jen u spolehlivých měření (ty použije prep.py), build/dmp_kontrola.csv: zbytek
-import glob, json, math, sys
+import glob, json, sys
 from multiprocessing import Pool
 import numpy as np, laspy, shapely, pyarrow.parquet as pq
-from shapely import wkb
 from pyproj import Transformer
 T = Transformer.from_crs(4326, 5514, always_xy=True)
 def krovak(g):

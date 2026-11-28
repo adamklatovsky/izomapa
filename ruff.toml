@@ -1,0 +1,9 @@
+# ruff check: jen skutečné chyby (syntaxe, nedefinované a nepoužité názvy), ne styl. Formátovač se nepoužívá, kód je psaný hutně schválně.
+extend-exclude = ["node_modules", "build", "site", "data*"]
+
+[lint]
+select = ["E9", "F"]
+
+[lint.per-file-ignores]
+"prep.py" = ["F401"]                 # assets/custom_prep.py běží v globálech prep.py a importy z něj může používat
+"priklady/custom_prep.py" = ["F821"] # HOOK a další názvy dodá prep.py

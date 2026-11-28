@@ -33,7 +33,6 @@ def vlak(x):
         if cislo is None: cislo = l.findtext('OperationalTrainNumber')
         if typ is None: typ = l.findtext('TrafficType')
         if dop is None: dop = l.findtext('ResponsibleRU')
-        p = l.findtext('CommercialTrafficType') or druh
         if a or d:
             ta = cas(a[0]) + a[1] * 86400 if a else None
             td = cas(d[0]) + d[1] * 86400 if d else None

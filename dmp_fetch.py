@@ -1,6 +1,6 @@
 # stáhne listy DMP 1G (ČÚZK, CC BY 4.0, laserové skenování povrchu) pokrývající budovy mapy do build/dmp/
 # python dmp_fetch.py   (seznam listů z ATOM feedu ČÚZK se stáhne do build/dmp/atom.xml, ~24 MB)
-import sys, re, glob, os, subprocess
+import re, glob, os, subprocess
 import pyarrow.parquet as pq, shapely
 os.makedirs('build/dmp', exist_ok=True)
 A = 'build/dmp/atom.xml'

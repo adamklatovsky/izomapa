@@ -163,7 +163,8 @@ Role a postupy jsou v obyčejných návodech, takže platí pro libovolného age
 
 ## Změny obecného kódu (pull request autorovi)
 
-- Testy: `./tests/run.sh` (Windows: `sh tests/run.sh`). Projít musí před každým PR.
+- Testy: `./tests/run.sh` (Windows: `sh tests/run.sh`) a kontrola chyb v Pythonu `ruff check .` (jednou `.venv/bin/pip install ruff`,
+  nastavení v `ruff.toml`, formátovač se nepoužívá). Obojí pusť před commitem; totéž u každého PR spouští GitHub Actions (`.github/workflows/testy.yml`).
 - `prep.py` je deterministický: změnu, která nemá měnit vzhled, ověř porovnáním `scene.json` postaveného čtverce
   před a po (`cmp`).
 - Práce ve forku a ve vlastní větvi z `upstream/main`, jedno téma na PR, bez dat a úprav města. Kontrola podle
