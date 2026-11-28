@@ -11,10 +11,12 @@ async function cached(path, ttl) {
   const cache = caches.default, key = new Request(API + path);
   let r = await cache.match(key);
   if (!r) {
-    let up;
-    try { up = await fetch(API + path, { headers: { 'user-agent': 'izomapa (mapa sypacu)' }, signal: AbortSignal.timeout(6000) }); } catch { return null; }
-    if (!up.ok) return null;
-    r = new Response(await up.text(), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': `public, max-age=${ttl}` } });
+    let body = 'null';                                   // výpadek ŘSD se cachuje taky (30 s), ať každý dotaz nečeká 6 s na timeout
+    try {
+      const up = await fetch(API + path, { headers: { 'user-agent': 'izomapa-pluhy/1.0' }, signal: AbortSignal.timeout(6000) });
+      if (up.ok) body = await up.text();
+    } catch {}
+    r = new Response(body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': `public, max-age=${body === 'null' ? 30 : ttl}` } });
     await cache.put(key, r.clone());
   }
   try { return await r.json(); } catch { return null; }
@@ -27,12 +29,14 @@ export async function onRequest({ request }) {
   if (![la0, la1, lo0, lo1].every(Number.isFinite) || la1 - la0 > 2 || lo1 - lo0 > 3) return J({ pts: [], trasy: [] }, 400);
   const inBox = ([lon, lat]) => lat >= la0 && lat <= la1 && lon >= lo0 && lon <= lo1;
   const [P, L, O] = await Promise.all([cached('GetGEOJSONWholeLivePoints', 5), cached('GetGEOJSONWholeLive/2/0/0/0/0', 60), cached('GetGEOJSONWholeOld/2/0/0/0/0', 60)]);
-  const pts = ((P && P.features) || []).filter((f) => f.geometry && inBox(f.geometry.coordinates)).map((f) => ({
+  const ok = (f) => f && f.properties && f.geometry && Array.isArray(f.geometry.coordinates);   // neúplný záznam přeskočit, ať neshodí celou odpověď
+  const pts = ((P && P.features) || []).filter((f) => ok(f) && inBox(f.geometry.coordinates)).map((f) => ({
     id: f.properties.name, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], t: f.properties.time,
     v: f.properties.speed, z: f.properties.control, s: f.properties.roadType }));
   const trasy = [];
   for (const f of [...((L && L.features) || []), ...((O && O.features) || [])]) {
-    const a = AGE[f.properties && f.properties.name]; if (a === undefined || !f.geometry) continue;
+    if (!ok(f)) continue;
+    const a = AGE[f.properties.name]; if (a === undefined) continue;
     const lines = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates;
     for (const l of lines) {
       let run = [];                                     // jen části uvnitř výřezu (s jedním bodem přesahu kvůli okraji)
