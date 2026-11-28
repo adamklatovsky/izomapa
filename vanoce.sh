@@ -36,7 +36,7 @@ for c in $PLAN; do
 done
 # z tiles.json pryč vrstvy čtverců, kde už výzdoba není
 if [ -f site/tiles.json ]; then python - $KEEP <<'PY'      # if, ne &&: chyba pythonu skript zastaví (set -e)
-import json, sys
+import json, os, sys
 keep = set(sys.argv[1:])
 t = json.load(open('site/tiles.json'))
 def clean(d, key):
@@ -44,7 +44,7 @@ def clean(d, key):
         if v in d and key not in keep: del d[v]; print('odstraněno', key, v)
 clean(t, '0,0')
 for ch in t.get('chunks', {}).values(): clean(ch, f"{ch['chunk'][0]},{ch['chunk'][1]}")
-json.dump(t, open('site/tiles.json', 'w'))
+json.dump(t, open('site/tiles.json.tmp', 'w')); os.replace('site/tiles.json.tmp', 'site/tiles.json')   # atomicky jako dzi.py: Ctrl-C nenechá rozbitý soubor
 PY
 fi
 python build_html.py > /dev/null
