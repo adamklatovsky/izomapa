@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw, ImageFilter
 import geo
 from geo import HALF, HREF
 from nastroje.tabulky import radky
+from nastroje.tenis import tenis_mrizka
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else 'data'
 CHUNK = tuple(int(v) for v in sys.argv[2].split(',')) if len(sys.argv) > 2 else (0, 0)
@@ -233,24 +234,32 @@ NOTREE_LU = {'pitch', 'track', 'playground', 'stadium', 'school', 'industrial', 
 lu = load('land_use')
 lu['area'] = lu.geom.map(lambda g: g.area)
 lu = lu.sort_values('area', ascending=False)
-def _green_share(g):
-    # podíl zeleně z ortofota (nastroje/povrchy.py) na mřížce po 5 m v ploše
+def _green_share(g, trava=False):
+    # podíl zeleně z ortofota (nastroje/povrchy.py) na mřížce po 5 m v ploše; trava=True bez korun stromů
     if not os.path.exists('build/zelen_maska.png'): return 0.0
     x0_, y0_, x1_, y1_ = g.bounds; xs_, ys_ = np.meshgrid(np.arange(x0_, x1_, 5.0), np.arange(y0_, y1_, 5.0))
     inside = shapely.contains_xy(g, xs_, ys_)
     if inside.sum() < 8: return 0.0
-    z_, h_ = _GZ
+    z_, h_ = _GZ_T if trava else _GZ
     return float(z_[np.clip(((h_[1] - (ys_[inside] + CY)) / h_[2]).astype(int), 0, z_.shape[0] - 1), np.clip(((xs_[inside] + CX - h_[0]) / h_[2]).astype(int), 0, z_.shape[1] - 1)].mean())
-_GZ = None
+_GZ = _GZ_T = None
 if os.path.exists('build/zelen_maska.png'):
     _gz = np.asarray(Image.open('build/zelen_maska.png')) > 0
+    _GZ_T = (_gz, json.load(open('build/zelen_maska.json', encoding='utf-8'))['x0y1m'])
     if os.path.exists('build/les_maska.png'):                   # koruny stromů jsou tmavé a maska zeleně je nepočítá
         _lz = np.asarray(Image.open('build/les_maska.png')) > 0
         if _lz.shape == _gz.shape: _gz = _gz | _lz
     _GZ = (_gz, json.load(open('build/zelen_maska.json', encoding='utf-8'))['x0y1m'])
 _PARK_Z = set()
+def _tag(r, k):
+    return (dict(r['source_tags']) if r.get('source_tags') is not None else {}).get(k)
+# tenis: antuka (v Česku nejčastější, i bez tagu surface), tvrdý povrch modrý, tráva zůstane hřištěm
+TENIS_POVRCH = {None: 'track', 'clay': 'track', 'grass': 'pitch', 'artificial_turf': 'pitch'}
 for _, r in lu.iterrows():
     k = SAT['lu'].get(r.id) or LU.get(r['class'])
+    if not SAT['lu'].get(r.id) and r['class'] == 'pitch' and _tag(r, 'sport') == 'tennis': k = TENIS_POVRCH.get(_tag(r, 'surface'), 'court_blue')
+    elif not SAT['lu'].get(r.id) and r['class'] == 'pitch' and _tag(r, 'surface') == 'sand': k = 'sand'          # plážový volejbal
+    elif not SAT['lu'].get(r.id) and r['class'] == 'beach_resort' and _green_share(r.geom, trava=True) <= 0.5: k = 'sand'   # pláž; travnaté koupaliště zůstane trávou
     block_ = r['class'] in NOTREE_LU
     if k == 'cobble' and _green_share(r.geom) > 0.5: k = 'park'; block_ = False; _PARK_Z.add(r.id)      # náměstí, které je ve skutečnosti park
     if k: fill(r.geom, C[k], block=block_)
@@ -264,7 +273,33 @@ if os.path.exists('build/zelen_maska.png'):
     _n = np.array(notree); _n[_hit] = 0; notree.paste(Image.fromarray(_n))
 # pitch: bílé čáry hřiště. Překrývající se hřiště z dat se sloučí (jinak se čáry kříží); čáry jen u zhruba obdélníkových
 pitch_polys = [p for _, r in lu.iterrows() if r['class'] == 'pitch' and SAT['lu'].get(r.id, 'pitch') in ('pitch', 'track', 'court_blue')
-               for p in polys(r.geom.intersection(DRAWBOX)) if p.area > 30]
+               and _tag(r, 'sport') != 'tennis' and _tag(r, 'surface') != 'sand' for p in polys(r.geom.intersection(DRAWBOX)) if p.area > 30]
+# tenisové kurty každý zvlášť (sloučené vedle sebe by vypadaly jako jedno velké hřiště): čáry čtyřhry a dvouhry, podání a síť
+for _, r in lu.iterrows():
+    if r['class'] != 'pitch' or _tag(r, 'sport') != 'tennis': continue
+    for p in polys(r.geom.intersection(DRAWBOX)):
+        o = p.minimum_rotated_rectangle
+        if p.area < 60 or p.area / max(o.area, 1) < 0.8: continue
+        oc = [np.array(c) for c in list(o.exterior.coords)[:4]]
+        e1, e2 = oc[1] - oc[0], oc[3] - oc[0]
+        if np.linalg.norm(e1) < np.linalg.norm(e2): oc = [oc[0], oc[3], oc[2], oc[1]]; e1, e2 = e2, e1
+        L, W = np.linalg.norm(e1), np.linalg.norm(e2); u, v = e1 / L, e2 / W
+        # jedna plocha v datech bývá víc kurtů vedle sebe (kurt i s výběhem ~34 × 17 m): rozdělit na mřížku,
+        # kurty buď podél delší strany plochy, nebo napříč, podle toho, co líp sedí na rozměry
+        na, nb = tenis_mrizka(L, W)
+        if na < 0: u, v, L, W, na, nb = v, u, W, L, -na, nb   # kurty napříč: delší osa kurtu podél kratší strany plochy
+        cl, cw = L / na, W / nb
+        k_ = min(1.0, (cl - 2) / 23.77, (cw - 1) / 10.97)       # menší plocha v datech (jen kurt bez výběhu): čáry zmenšit
+        if k_ < 0.5: continue
+        for ia in range(na):
+            for ib in range(nb):
+                cx_, cy_ = oc[0] + u * cl * (ia + 0.5) + v * cw * (ib + 0.5)
+                pt = lambda s_, t_: (cx_ + (u[0] * s_ + v[0] * t_) * k_, cy_ + (u[1] * s_ + v[1] * t_) * k_)
+                ln = lambda *q: cd.line(P([pt(*x) for x in q]), fill=C['marking'], width=1)
+                ln((-11.885, -5.485), (11.885, -5.485), (11.885, 5.485), (-11.885, 5.485), (-11.885, -5.485))   # čtyřhra
+                ln((-11.885, -4.115), (11.885, -4.115)); ln((-11.885, 4.115), (11.885, 4.115))                  # dvouhra
+                ln((-6.4, -4.115), (-6.4, 4.115)); ln((6.4, -4.115), (6.4, 4.115)); ln((-6.4, 0), (6.4, 0))      # podání
+                ln((0, -6.4), (0, 6.4))                                                                          # síť
 for p in polys(shapely.unary_union(pitch_polys)) if pitch_polys else []:
     o = p.minimum_rotated_rectangle
     if p.area / max(o.area, 1) < 0.86: continue                 # nepravidelný tvar: jen plocha bez čar
@@ -288,7 +323,7 @@ for p in polys(shapely.unary_union(pitch_polys)) if pitch_polys else []:
 
 land = load('land')
 LAND = {'forest': 'forest', 'wood': 'forest', 'scrub': 'scrub', 'shrub': 'scrub', 'grassland': 'meadow',
-        'wetland': 'wetland', 'bare_rock': 'rock', 'rock': 'rock'}
+        'wetland': 'wetland', 'bare_rock': 'rock', 'rock': 'rock', 'beach': 'sand'}
 for _, r in land.iterrows():
     if r['class'] in LAND and r.geom.geom_type != 'Point':
         fill(r.geom, C[LAND[r['class']]])
