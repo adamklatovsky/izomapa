@@ -116,6 +116,29 @@ def walk_of(chunk):
     _WALK[tuple(chunk)] = {'walk': {'l': L, 'c': ''.join(C), 'a': A}} if L or A else {}
     return _WALK[tuple(chunk)]
 
+def lesni_cesty(wk, T, off):
+    """walk čtverce bez cest t a d (lesní cesta, cyklotrasa po cestě), které jsou z víc než poloviny pod korunami stromů T (scéna
+    čtverce, místní souřadnice) z pohledu mapy: chodec by tam šel přes koruny a stromy celého lesa by data nafoukly"""
+    if not wk or not T or not any(c in 'td' for c in wk['walk']['c']): return wk
+    A = np.array([t[:5] for t in T], float); A[:, 0] += off[0]; A[:, 1] += off[1]
+    cx, cy, cd = im.px(A[:, 0], A[:, 1], A[:, 2] + A[:, 3] * 0.62)
+    rr = np.where(A[:, 4] > 0, 0.2, 0.32) * A[:, 3] / MPP_OVERLAY        # koruna jako u svíček na hrobech
+    st = shapely.STRtree(shapely.points(A[:, :2]))
+    L, C = [], ''
+    for l, c in zip(wk['walk']['l'], wk['walk']['c']):
+        if c in 'td':
+            g = shapely.LineString(l); S = [g.interpolate(min(g.length, 5 * i)) for i in range(int(g.length // 5) + 1)]
+            kryto = 0
+            for p in S:
+                k = st.query(p, predicate='dwithin', distance=45)
+                if not len(k): continue
+                z = A[k[np.argmin(np.hypot(A[k, 0] - p.x, A[k, 1] - p.y))], 2]   # terén u cesty: jako u nejbližšího stromu
+                a, b, d = im.px(p.x, p.y, z + 1)
+                kryto += bool(np.any((cd[k] < d) & ((cx[k] - a) ** 2 + (cy[k] - b) ** 2 < rr[k] ** 2)))
+            if kryto > len(S) / 2: continue
+        L.append(l); C += c
+    return {'walk': {**wk['walk'], 'l': L, 'c': C}} if L or wk['walk']['a'] else {}
+
 ONE_BUILDING = set(MESTO.get('jedna_budova', []))      # dominanty se zónami střech: v prepu samostatné díly, na mapě jedna budova
 
 
@@ -259,8 +282,9 @@ for chunk in chunks:
     # stromy u silnic, kolejí a sjezdovek: auta, tramvaje a lyžaři se za jejich korunami schovají (svět, z terénu, výška, jehličnan)
     sc_ = json.load(open(f'{chunk_dir(chunk)}/scene.json', encoding='utf-8'))
     T_ = [t for t in sc_['trees'] if (len(t) < 6 or t[5] != 2) and abs(t[0]) <= HALF and abs(t[1]) <= HALF]
-    _wk = walk_of(chunk).get('walk', {})   # stromy i u pěších zón, ať se za ně chodci schovají (ne u lesních cest: data by nabobtnala)
-    ln_ = [shapely.LineString([(x - OFF[0], y - OFF[1]) for x, y in w_]) for w_, c_ in zip(_wk.get('l', []), _wk.get('c', '')) if c_ == 'p'] + \
+    _WALK[tuple(chunk)] = lesni_cesty(walk_of(chunk), [t for t in sc_['trees'] if len(t) < 6 or t[5] != 2], OFF)
+    _wk = walk_of(chunk).get('walk', {})   # stromy u všech pěších cest, ať se za ně chodci schovají (cesty lesem vypadly výš)
+    ln_ = [shapely.LineString([(x - OFF[0], y - OFF[1]) for x, y in w_]) for w_ in _wk.get('l', []) if len(w_) > 1] + \
       [shapely.LineString([(x, y) for x, y, _ in r['p']]) for r in src['roads'] if len(r['p']) > 1] + \
           [shapely.LineString([(x, y) for x, y, _ in l]) for l in src.get('trams', []) + src.get('pistes', []) if len(l) > 1]
     vtrees = []
