@@ -1671,6 +1671,19 @@ if LESM is not None:                         # strom jen tam, kde je na ortofotu
         if not (0 <= px_ < TWE and 0 <= py_ < TWE) or LESM[py_, px_]: return True
         return h01('z' + wkey(t[0], t[1])) < 0.3 and _sp.contains(Point(t[0], t[1]))
     trees = [t for t in trees if _ok(t)]
+if os.path.exists('assets/stromy_orto.json'):       # stromy mimo les podle ortofota (nastroje/stromy_orto.py)
+    _so = np.array(json.load(open('assets/stromy_orto.json', encoding='utf-8')), float).reshape(-1, 5)
+    _sx, _sy = (np.asarray(v) for v in to_local(_so[:, 1], _so[:, 0]))
+    _k = shapely.contains_xy(EXT, _sx, _sy) & free_v(_sx, _sy)        # ne v budově (+okap), na silnici, ve vodě
+    _so, _sx, _sy = _so[_k], _sx[_k], _sy[_k]
+    if len(_so) and trees:
+        from scipy.spatial import cKDTree
+        _FOR = shapely.prepared.prep(shapely.unary_union([g for c, g in zip(land['class'], land.geom)
+                                      if c in ('forest', 'wood', 'scrub', 'shrub') and g.geom_type != 'Point']).buffer(0))
+        _d, _i = cKDTree(np.c_[_sx, _sy]).query(np.array([t[:2] for t in trees]))
+        # náhodné stromy mimo les v okolí změřené koruny pryč (koruna + 3 m), v lese zůstává výsadba z dat
+        trees = [t for t, d_, i_ in zip(trees, _d, _i) if d_ > _so[i_, 4] + 3 or _FOR.contains(Point(t[0], t[1]))]
+        trees[:0] = [(float(x), float(y), float(q[2]), int(q[3]), 0) for x, y, q in zip(_sx, _sy, _so)]
 for _o in OBL.values():                      # oblast podle skutečnosti: náhodné stromy pryč, místo nich změřené
     if _o.get('skryt'): continue
     _q = shapely.prepared.prep(Polygon([to_local(lo, la) for la, lo in _o['poly']]))
