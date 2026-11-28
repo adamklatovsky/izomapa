@@ -1,6 +1,6 @@
 """Výletní vláček (doplněk): trasa po silnicích přes zastávky a časy jízdy podle jízdního řádu (assets/doplnky/vlacek.json).
 
-Všechny směry se spojí do jednoho okruhu (Doksy -> Staré Splavy -> Doksy), trasa mezi zastávkami se dopočítá po silnicích
+Všechny směry se spojí do jednoho okruhu (tam a zpět), trasa mezi zastávkami se dopočítá po silnicích
 z Overture (road_route.Graph, stejně jako trasy autobusů bez shapes.txt). Prohlížeč dostane okruh [lat, lon], jeho délku
 a „klíčové body“ jedné otočky [čas s od půlnoci, vzdálenost po okruhu m]; mezi nimi jen interpoluje.
 """

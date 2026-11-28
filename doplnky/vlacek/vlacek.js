@@ -104,10 +104,11 @@
       // díly soupravy: [druh, vzdálenost středu za čelem, délka]
       const parts = [['L', LOCO / 2, LOCO]];
       for (let i = 0; i < Math.max(0, Math.min(6, D.vagony ?? 3)); i++) parts.push(['W', LOCO + GAP + WAG / 2 + i * (WAG + GAP), WAG]);
+      const layerOn = (id) => { const e = document.getElementById(id); return !e || e.checked; };   // vrstva Doprava v panelu
       let drawn = [];
       unsubFrame = api.onFrame((ctx, view) => {
         drawn = [];
-        if (view.sx <= 0.12 || view.night > 0.45 || view.weather === 'rain' || view.weather === 'snow') return;
+        if (view.sx <= 0.12 || view.night > 0.45 || view.weather === 'rain' || view.weather === 'snow' || !layerOn('l-traffic')) return;
         if (!(D.obdobi || ['summer']).includes(view.season)) return;
         const s = sNow(), { sx, ox, oy } = view;
         const [hx, hy] = at(s);
