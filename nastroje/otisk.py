@@ -1,6 +1,6 @@
 # Otisk vstupů renderu jednoho čtverce: python nastroje/otisk.py 0,-1
 # Když se otisk od posledního renderu nezměnil (build/.../otisk_renderu), render_ctverec.sh render a dlaždice přeskočí.
-# Do otisku patří scéna a podklady čtverce z prep.py, kód, který z nich dělá dlaždice, rozlišení z mesto.json
+# Do otisku patří scéna a podklady čtverce z prep.py, kód, který z nich dělá dlaždice, verze three.js, rozlišení z mesto.json
 # a schválené vlastní modely památek, které do čtverce zasahují (stejná vzdálenost jako pamatky/render_mapa.sh).
 import glob, hashlib, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,6 +20,8 @@ if os.path.exists('pamatky/schvalene.json'):
 if pam: soubory += ['pamatky/_kit.js', 'pamatky/_drobne.js'] + pam
 h = hashlib.sha256()
 h.update(f'mpp={geo.MPP}'.encode())       # po změně "rozliseni" v mesto.json se kreslí všechny čtverce znovu
+three = 'node_modules/three/package.json'      # jiná verze three.js (npm install) kreslí jinak: ne směs starých a nových čtverců
+h.update(f'three={json.load(open(three, encoding="utf-8"))["version"] if os.path.exists(three) else ""}'.encode())
 for f in soubory:
     h.update(f.encode())
     if os.path.exists(f):
