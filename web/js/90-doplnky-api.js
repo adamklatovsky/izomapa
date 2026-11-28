@@ -34,6 +34,12 @@
     toImg: (x, y, h = 0) => toImg(x, y, h),
     imgToWorld: (ix, iy) => imgToWorld(ix, iy),
     gz: (x, y) => gz(x, y),
+    occluded(x, y, z, r = 0, h = 0) {                                    // bod (nebo kvádr ±r m kolem x, y, výška z až z + h) celý za budovou, mostovkou nebo stromem
+      const S = r ? [-r, 0, r] : [0], H = h ? [0, h / 2, h] : [0];
+      for (const dx of S) for (const dy of S) for (const dz of H) if (!svetloSkryte(x + dx, y + dy, z + dz)) return false;
+      return true;
+    },
+    drawOccluded: (img, ix, iy, iw, ih, x, y, z, view) => drawBehindTrees(img, ix, iy, iw, ih, x, y, z, view.sx, view.ox, view.oy),   // obrázek v pixelech mapy, ořízne ho, co je před bodem (x, y, z)
     latLonToWorld: (lat, lon) => [(lon - cam.lon0) * cam.kx, (lat - cam.lat0) * cam.ky],
     worldToLatLon: (x, y) => { const [lon, lat] = lonlat(x, y); return [lat, lon]; },
     latLonToImg: (lat, lon, hOffset = 0) => { const x = (lon - cam.lon0) * cam.kx, y = (lat - cam.lat0) * cam.ky; return toImg(x, y, gz(x, y) + hOffset); },
