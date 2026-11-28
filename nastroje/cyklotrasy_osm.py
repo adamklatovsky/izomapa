@@ -2,20 +2,17 @@
 # -> assets/cyklotrasy.json: [[druh, [[lat, lon], ...]], ...], druh c = po silnici (cyklista u pravého okraje), d = po cestě (středem).
 # Úseky po cyklostezkách vynechá (ty už jsou v pěších čarách jako druh k). Pak overlay.py a build_html.py.
 # spouštět z kořene repa: python nastroje/cyklotrasy_osm.py
-import json, subprocess, sys; sys.path.insert(0, '.')
+import json, sys; sys.path.insert(0, '.')
 import geo
+from nastroje.overpass import overpass
 
 SILNICE = {'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service',
            'primary_link', 'secondary_link', 'tertiary_link'}
 x0, y0, x1, y1 = geo.extent(geo.MARGIN)
 lo0, la0 = geo.to_lonlat(x0, y0); lo1, la1 = geo.to_lonlat(x1, y1); b = f'{la0},{lo0},{la1},{lo1}'
 q = f'[out:json][timeout:90];rel["route"="bicycle"]({b});way(r)({b});out tags geom;'
-t = None
-for url in ('https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'):   # záložní server
-    try:
-        t = subprocess.run(['curl', '-s', '-f', '-m', '150', '-A', 'izomapa-tools/1.0', '--data-urlencode', f'data={q}', url],
-                           check=True, capture_output=True, text=True, encoding='utf-8').stdout; json.loads(t); break
-    except (subprocess.CalledProcessError, ValueError) as ex: print(url, str(ex)[:120]); t = None
+try: t = json.dumps(overpass(q))
+except SystemExit: t = None
 CACHE = 'build/cyklotrasy_osm.json'               # poslední odpověď Overpassu, když je server přetížený
 if t is not None: open(CACHE, 'w', encoding='utf-8').write(t)
 else:

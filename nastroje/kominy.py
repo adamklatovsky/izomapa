@@ -1,8 +1,9 @@
 # komíny, chladicí věže, vysílače, nádrže a nadzemní potrubí z OpenStreetMap (Overpass, ODbL, bez registrace)
 # assets/kominy.json: [{"lat", "lon", "h", "k": "komin" | "vez" | "stozar" | "nadrz" | "rozhledna", "r": poloměr paty nebo null}]
 # assets/potrubi.json: [[[lat, lon], ...]]; spouštět z kořene repa: python nastroje/kominy.py
-import json, math, subprocess, sys; sys.path.insert(0, '.')
+import json, math, sys; sys.path.insert(0, '.')
 import geo
+from nastroje.overpass import overpass
 
 SHODA_M = 15          # stejný komín bývá v OSM jako bod i jako plocha
 VYCHOZI_H = {'komin': 25.0, 'vez': 40.0, 'stozar': 30.0, 'nadrz': 10.0, 'rozhledna': 13.0}
@@ -59,12 +60,8 @@ def potrubi(prvky):
 if __name__ == '__main__':
     x0, y0, x1, y1 = geo.extent(geo.MARGIN + 20)
     lo0, la0 = geo.to_lonlat(x0, y0); lo1, la1 = geo.to_lonlat(x1, y1); b = f'{la0},{lo0},{la1},{lo1}'
-    def dotaz(q):
-        t = subprocess.run(['curl', '-s', '-f', '-m', '120', '-A', 'izomapa-tools/1.0', '--data-urlencode', f'data={q}', 'https://overpass-api.de/api/interpreter'],
-                           check=True, capture_output=True, text=True, encoding='utf-8').stdout
-        return json.loads(t)['elements']
-    v = vyber(dotaz(f'[out:json][timeout:60];(nwr["man_made"="chimney"]({b});nwr["tower:type"~"^(stack|cooling|communication|observation)$"]({b});nwr["man_made"="storage_tank"]({b}););out tags center bb;'))
+    v = vyber(overpass(f'[out:json][timeout:60];(nwr["man_made"="chimney"]({b});nwr["tower:type"~"^(stack|cooling|communication|observation)$"]({b});nwr["man_made"="storage_tank"]({b}););out tags center bb;')['elements'])
     json.dump(v, open('assets/kominy.json', 'w'), indent=0)
-    tr = potrubi(dotaz(f'[out:json][timeout:60];way["man_made"="pipeline"]({b});out tags geom;'))
+    tr = potrubi(overpass(f'[out:json][timeout:60];way["man_made"="pipeline"]({b});out tags geom;')['elements'])
     json.dump(tr, open('assets/potrubi.json', 'w'))
     print({k: sum(p['k'] == k for p in v) for k in VYCHOZI_H}, 'potrubí', len(tr))
