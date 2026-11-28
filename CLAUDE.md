@@ -130,6 +130,8 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   na menší pole a plodinu vybere podle jasu (světlé obilí, tmavá kukuřice; `assets/zabaged.json` klíče `orna_dil`,
   `orna_plodina`). Spouštět po `les.py` a `pole.py`, pak `./postav.sh render`.
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
+  Když maska bere cesty, trať, louky nebo pole za les, zapni `"les_zrnitost": true` v `mesto.json`: koruny se poznají i podle
+  zrnitosti ortofota a s laserem z `dmp_fetch.py` (`build/dmp/`) i podle bodů vegetace. Pak znovu `nastroje/les.py` a `./postav.sh render`.
 - **Potoky, ruční mosty a drobné stavby:** potoky jen s `"potoky": true` v `mesto.json` (schovají se pod budovami;
   zatrubněné úseky – v OSM `tunnel=culvert|yes` nebo `layer` < 0 – jsou tenká přerušovaná čára). V `assets/upresneni.json`: `"bridges": [{"line": [[lat, lon], …], "w": 2.5, "h": 1.2}]` (lávka), `"bridge_min"` (nejkratší most, výchozí 8 m), `"custom_bld": [{"id", "poly": [[lat, lon], …], "h"}]` (drobná stavba), `"cemetery"` (rozteče hrobů a kolik stromů zůstane). Po změně je potřeba `prep.py` a nový render.
 - **Stáda zvířat (krávy, koně, srnky):** `assets/upresneni.json`, `"stada": [{"typ": "kravy"|"kone"|"srnky", "lat": ..., "lon": ..., "pocet": 10, "radius": 35}]`. Stádo se chová podle ročního období a denní doby (v zimě/sněhu a v noci/tmě se semkne do těsného hloučku, na podzim/v dešti drží skupinky, v létě a na jaře se pase po celé ploše pastviny; na jaře se u matek objevují novorozená mláďata – telata, hříbata, srnčata).
