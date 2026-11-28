@@ -10,7 +10,7 @@
     const s = state.season;
     if (!STROMY[s]) {
       STROMY[s] = { ok: false };
-      Promise.all([fetch(`stromy/${s}.json`).then((r) => r.json()), new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = `stromy/${s}.png`; })])
+      Promise.all([fetch(`stromy/${s}.json${VER}`).then((r) => r.json()), new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = `stromy/${s}.png${VER}`; })])
         .then(([m, im]) => Object.assign(STROMY[s], m, { im, ok: true })).catch(() => {});
     }
     return STROMY[s].ok ? STROMY[s] : null;

@@ -361,7 +361,7 @@ for s in SOUS_RAW:
     if not k: continue
 
     OFF = (0.0, 0.0)
-    z = gz(x, y) or float(MESTO.get('href', 0))
+    z = gz(x, y)          # výška nad HREF jako u míst (mimo mapu 0), ne absolutní m n. m.
     ix, iy, _ = px(float(x), float(y), z)
     item = {'name': name, 'url': url, 'lat': lat, 'lon': lon, 'k': k, 'xy': [ix, iy], 'target': target}
     if text: item['text'] = text
