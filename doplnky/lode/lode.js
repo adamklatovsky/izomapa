@@ -86,6 +86,7 @@
       if (!D || !D.voda) return;
       const W = (q) => api.latLonToWorld(q[0], q[1]);
       const toImg = api.toImg, gz = api.gz;
+      api.addTrees?.(D.stromy);                            // stromy na plážích (data čtverců mají jen stromy u cest): schovají lidi za korunou
       // plocha z prstenců: sudo-liché pravidlo, takže ostrovy (další prstence uvnitř) jsou díry
       const area = (rings) => {
         const E = []; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -203,17 +204,19 @@
 
       // lidé na plážích (plaze[].lezaci): leží na dekách, sedí, chodí k vodě a zpět, děti; slunečníky. Místa pevně podle čísla pláže
       // a postavy, chůze k vodě podle hodin: všichni návštěvníci vidí totéž
+      const beachC = document.createElement('canvas'), beachG = beachC.getContext('2d');
+      const kmen = (x, y) => (D.stromy || []).some((t) => Math.hypot(t[0] - x, t[1] - y) < 1.2);   // deka pod korunou ano, postava v kmeni ne
       const TOWEL = ['#e8402a', '#2f6fd1', '#f2c230', '#f2f0ea', '#2aa36b', '#e0629a', '#7a3fa8'], beach = [];
       (D.plaze || []).forEach((P, bi) => {
         const A = area([P.q]), [x0, y0, x1, y1] = A.box, N = P.lezaci ?? 0;
         for (let k = 0, t = 0; k < N && t < N * 80; t++) {
           const z = 3000 + bi * 7001 + t * 3, x = x0 + rnd(z) * (x1 - x0), y = y0 + rnd(z + 1) * (y1 - y0);
-          if (!A.inside(x, y) || A.dist(x, y) < 1.5 || voda.inside(x, y)) continue;
+          if (!A.inside(x, y) || A.dist(x, y) < 1.5 || voda.inside(x, y) || kmen(x, y)) continue;
           const w = bi * 1000 + k++, r = rnd(w + 7), o = { x, y, q: rnd(w + 8), d: rnd(w + 9) < 0.5 ? 1 : -1, skin: SKIN[w % SKIN.length], hair: HAIR[w % HAIR.length], suit: CAPS[(w + 1) % CAPS.length], towel: TOWEL[w % TOWEL.length] };
           o.m = r < 0.45 ? 'lie' : r < 0.7 ? 'sit' : r < 0.85 ? 'walk' : 'kid';
           if (o.m === 'walk') { const wq = voda.near(x, y), d = Math.hypot(wq[0] - x, wq[1] - y); o.wq = [x + (wq[0] - x) * (d + 1.5) / d, y + (wq[1] - y) * (d + 1.5) / d]; o.T = 2 * (d + 1.5) / 1.1 + 40 + rnd(w + 10) * 60; o.off = rnd(w + 11) * o.T; }
           beach.push(o);
-          if (o.m === 'lie' && rnd(w + 12) < 0.35) beach.push({ m: 'umb', x: x + 0.6, y: y - 0.6, q: o.q, c: [CAPS[w % CAPS.length], CAPS[(w + 3) % CAPS.length]] });   // slunečník trochu před dekou, aby ji kryl
+          if (o.m === 'lie' && rnd(w + 12) < 0.35 && !kmen(x + 0.6, y - 0.6)) beach.push({ m: 'umb', x: x + 0.6, y: y - 0.6, q: o.q, c: [CAPS[w % CAPS.length], CAPS[(w + 3) % CAPS.length]] });   // slunečník trochu před dekou, aby ji kryl
         }
       });
       const beachPos = (o, now) => {
@@ -341,14 +344,17 @@
         for (const o of beach) {
           if (o.q > (view.eco ? 0.5 : 1) * (1 - 0.8 * view.night)) continue;
           const [x, y, mv] = beachPos(o, nowMs), z = gz(x, y), ip = toImg(x, y, z);
-          if (view.vis(ip[0], ip[1], 40) && !api.occluded(x, y, z + (o.m === 'umb' ? 1.5 : 0.4))) list.push([o, ip, mv]);
+          if (view.vis(ip[0], ip[1], 40) && !(o.m === 'umb' && api.occluded(x, y, z + 1.2))) list.push([o, ip, mv, x, y, z]);   // slunečník se spodkem za korunou celý pryč (samotná stříška nad korunou mate)
         }
         list.sort((a, b) => a[1][1] - b[1][1]);
-        const R = (X, Y, x0, y0, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(X + x0 * u, Y + y0 * u, w * u, h * u); };
-        const OUT = 'rgba(24,26,32,0.85)';
-        for (const [s, ip, mv] of list) {
+        let g = ctx;                                          // pláž se kreslí do pomocného plátna, stromy a domy před postavou ji po pixelech oříznou
+        const R = (X, Y, x0, y0, w, h, c) => { g.fillStyle = c; g.fillRect(X + x0 * u, Y + y0 * u, w * u, h * u); };
+        const OUT = 'rgba(24,26,32,0.85)', PX = Math.ceil(13 * u) + 1, PY = Math.ceil(29 * u) + 1, PW = 2 * PX, PH = PY + Math.ceil(3 * u) + 1;   // okraj postavy i slunečníku v bodech
+        if (beachC.width !== PW || beachC.height !== PH) { beachC.width = PW; beachC.height = PH; }
+        for (const [s, ip, mv, wx, wy, wz] of list) {
           if (s.m) {                                          // pláž: postavy po 10 cm jako plavci; d zrcadlí ležící a sedící
-            const X = Math.round(ox + ip[0] * sx), Y = Math.round(oy + ip[1] * sx), M = (x0, y0, w, h, c) => R(X, Y, s.d > 0 ? x0 : -x0 - w, y0, w, h, c);
+            g = beachG; g.clearRect(0, 0, PW, PH);
+            const X = PX, Y = PY, M = (x0, y0, w, h, c) => R(X, Y, s.d > 0 ? x0 : -x0 - w, y0, w, h, c);
             if (s.m === 'umb') {
               R(X, Y, -9, -1, 18, 3, 'rgba(60,44,20,0.18)'); R(X, Y, -0.5, -23, 1, 23, '#e8e4da');
               R(X, Y, -12.5, -26.5, 25, 5, OUT); R(X, Y, -4, -28, 8, 2, OUT);
@@ -362,6 +368,8 @@
               const k = s.m === 'kid' ? 0.65 : 1, Q = (x0, y0, w, h, c) => R(X, Y, x0 * k, y0 * k, w * k, h * k, c), st = mv && Math.sin(nowMs / 160 + s.x) > 0 ? 1 : 0;
               Q(-2.5, -16.5, 5, 16.5, OUT); Q(-1.5, -6, 1, 6 - st, s.skin); Q(0.5, -6, 1, 5 + st, s.skin); Q(-2, -9, 4, 3, s.suit); Q(-2, -13, 4, 4, s.skin); Q(-1.5, -16, 3, 3, s.skin); Q(-1.5, -16, 3, 1, s.hair);
             }
+            g = ctx;
+            api.drawOccluded(beachC, ip[0] - PX / sx, ip[1] - PY / sx, PW / sx, PH / sx, wx, wy, wz + 0.3, view);
             continue;
           }
           const X = Math.round(ox + ip[0] * sx), Y = Math.round(oy + ip[1] * sx), bob = Math.sin(tt * 2 + s.ph * 5) > 0.6 ? 1 : 0, Yb = Y + bob * u;

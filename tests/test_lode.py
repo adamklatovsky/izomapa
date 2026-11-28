@@ -35,6 +35,19 @@ def run(data):
 
 
 class HookTest(unittest.TestCase):
+    def test_stromy_plazi_ze_scen_ctvercu(self):
+        # pláž 10 × 10 m kolem počátku (lat = y, lon = x), dva čtverce po 200 m; strom na pláži, u ní, daleko, v pásu souseda a druhu 2
+        with tempfile.TemporaryDirectory() as d:
+            sc = {(0, 0): [[2, 3, 1.0, 12, 0, 0], [20, 0, 1.0, 8, 1], [90, 90, 1.0, 10, 0, 0], [3, 3, 1.0, 5, 0, 2]],
+                  (1, 0): [[-102, 0, 1.0, 9, 0, 0], [-90, 0, 1.0, 9, 0, 0]]}   # -102: pás souseda (x 98), -90: x 110 u druhé pláže
+            for c, T in sc.items():
+                Path(d, f'c{c[0]}').mkdir()
+                Path(d, f'c{c[0]}', 'scene.json').write_text(json.dumps({'trees': T}), encoding='utf-8')
+            out = hook.stromy_plazi([{'q': [[-5, -5], [-5, 5], [5, 5], [5, -5]]}, {'q': [[-5, 85], [5, 85], [5, 95], [-5, 95]]}], lambda lon, lat: (lon, lat), sc,
+                                    lambda c: f'{d}/c{c[0]}', lambda c: (c[0] * 200.0, 0.0), 100.0)
+        self.assertEqual(sorted(t[:2] for t in out), [[2, 3], [20, 0], [110, 0]])   # strom x 98 je v čtverci (1, 0) jen v pásu souseda
+        self.assertEqual(next(t for t in out if t[0] == 2), [2, 3, 1.0, 12, 0, 0])
+
     def test_bez_souboru_nebo_vody_se_vypne(self):
         self.assertFalse(run(None))
         self.assertFalse(run({'parniky': []}))
