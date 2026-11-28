@@ -1,0 +1,6 @@
+{
+ "pozn": "Ukázka pro doplněk pole: zkopírovat do assets/doplnky/pole.json (tím se doplněk zapne). Pole bere hook sám z assets/zabaged.json (nastroje/zabaged.py, pole.py, pole_cesty.py). stroje = kolik strojů najednou na celé mapě (kombajn nebo řezačka s vlekem jsou dva), min_ha = nejmenší pole, louky = v létě senoseč i na loukách (víc dat pro prohlížeč). Ilustrační provoz.",
+ "stroje": 5,
+ "min_ha": 1,
+ "louky": false
+}

@@ -1,0 +1,8 @@
+{
+  "id": "pole",
+  "name": "Práce na polích",
+  "version": "1.0.0",
+  "description": "Na orné půdě jezdí traktory a kombajny podle ročního období: na jaře orba, setí a válení, v létě žně, na podzim sklizeň kukuřice a orba; za strojem zůstává stopa (ilustrační provoz, jen ve dne a bez deště a sněhu).",
+  "hook": "overlay_hook.py",
+  "scripts": ["pole.js"]
+}

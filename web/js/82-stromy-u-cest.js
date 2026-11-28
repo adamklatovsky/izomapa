@@ -55,13 +55,13 @@
     }
     return false;
   };
-  function buildingShapes(x, y, z, bb, out) {                                  // domy před vozidlem: ořez podle přesného obrysu
+  function buildingShapes(x, y, z, bb, out, all = false) {                     // domy před vozidlem: ořez podle přesného obrysu (all = všechny v bb, plocha na zemi)
     const b0 = toImg(x, y, z), seen = new Set();
     for (let cx = Math.floor(bb[0] / CELL); cx <= Math.floor(bb[2] / CELL); cx++) for (let cy = Math.floor(bb[1] / CELL); cy <= Math.floor(bb[3] / CELL); cy++)
       for (const b of grid.get(cx + ',' + cy) || []) {
         if (seen.has(b) || !shown(b.k)) continue; seen.add(b);
         if (b.bb[0] > bb[2] || b.bb[2] < bb[0] || b.bb[1] > bb[3] || b.bb[3] < bb[1]) continue;
-        if (b.fb ? !behindFoot(b0[0], b0[1], b.fb) : !((b.dm ?? b.d) < depth(x, y, z) - 1.5)) continue;
+        if (!all && (b.fb ? !behindFoot(b0[0], b0[1], b.fb) : !((b.dm ?? b.d) < depth(x, y, z) - 1.5))) continue;
         out.push([3, b.hull]);
       }
   }
@@ -90,11 +90,14 @@
     const px = (slot % 16) * A.CW + u, py = Math.floor(slot / 16) * A.CH + v;
     return A.alfa.data[(py * A.alfa.width + px) * 4 + 3] > 100;
   }
-  function treeShapes(x, y, z, bb, m = 0) {                     // m = okraj v pixelech obrázku (zaokrouhlení při kreslení)
-    const dv = depth(x, y, z), out = [], cx = Math.floor(x / 16), cy = Math.floor(y / 16), A = stromy(), k0 = 0.2 / cam.mpp;
-    for (let i = cx - 4; i <= cx + 2; i++) for (let j = cy - 4; j <= cy + 2; j++) for (const t of TG.get(tgc(i, j)) || []) {   // stromy před vozidlem (k jihozápadu) až ~60 m
+  // cells = [i0, j0, i1, j1] buňky stromů pro plochu ležící na zemi (stopa na poli): kresba stromu nebo domu, která ji
+  // na obrazovce překrývá, stojí vždy před ní, takže bez porovnání hloubky ořízne všechno v buňkách a v bb (bez mostovek)
+  function treeShapes(x, y, z, bb, m = 0, cells = null) {       // m = okraj v pixelech obrázku (zaokrouhlení při kreslení)
+    const dv = cells ? Infinity : depth(x, y, z), out = [], cx = Math.floor(x / 16), cy = Math.floor(y / 16), A = stromy(), k0 = 0.2 / cam.mpp;
+    const [i0, j0, i1, j1] = cells || [cx - 4, cy - 4, cx + 2, cy + 2];
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (const t of TG.get(tgc(i, j)) || []) {   // stromy před vozidlem (k jihozápadu) až ~60 m
       const [tx, ty, tz, h, con] = t;
-      if (depth(tx, ty, tz) >= dv - 0.3) continue;                               // strom je za vozidlem
+      if (!cells && depth(tx, ty, tz) >= dv - 0.3) continue;                               // strom je za vozidlem
       if (A) {                                                                    // přesná kresba stromu
         const [slot, s] = treeSprite(A, t), k = k0 * s, b = toImg(tx, ty, tz);
         const L = b[0] - A.CW / 2 * k, T = b[1] - (A.CH - 3) * k;
@@ -113,14 +116,14 @@
         out.push([1, c, rx, ry]);
       }
     }
-    if (DG.size) deckShapes(x, y, z, dv, bb, out);
-    buildingShapes(x, y, z, bb, out);
+    if (DG.size && !cells) deckShapes(x, y, z, dv, bb, out);
+    buildingShapes(x, y, z, bb, out, !!cells);
     return out;
   }
   const occC = document.createElement('canvas'), occX = occC.getContext('2d');
-  function drawBehindTrees(img, ix, iy, iw, ih, x, y, z, sx, ox, oy) {
+  function drawBehindTrees(img, ix, iy, iw, ih, x, y, z, sx, ox, oy, cells = null) {
     const X0 = Math.round(ox + ix * sx), Y0 = Math.round(oy + iy * sx), w = Math.round(iw * sx), h = Math.round(ih * sx);
-    const sh = treeShapes(x, y, z, [ix, iy, ix + iw, iy + ih], 2 / sx);   // pomocné plátno je v pixelech CSS, kraje se zaokrouhlují: 2 px rezerva
+    const sh = treeShapes(x, y, z, [ix, iy, ix + iw, iy + ih], 2 / sx, cells);   // pomocné plátno je v pixelech CSS, kraje se zaokrouhlují: 2 px rezerva
     if (!sh.length) { ctx.drawImage(img, X0, Y0, w, h); return; }
     if (occC.width < w || occC.height < h) { occC.width = Math.max(occC.width, w); occC.height = Math.max(occC.height, h); }
     occX.clearRect(0, 0, w, h); occX.imageSmoothingEnabled = false; occX.globalCompositeOperation = 'source-over';
