@@ -112,7 +112,7 @@ nestahují).
 | mosty a lávky ve 3D s pozvolnými nájezdy, krátké podjezdy | skrytí zdvojených budov z dat (`"skryt_budovy"`) |
 | 4 roční období, noc, déšť, sníh, mlha | sousední mapy: cedule s odkazem na hraně mapy (`"sousedi"`) |
 | auta s přednostmi na kruhových objezdech, MHD podle jízdních řádů (GTFS) | |
-| chodci (v dešti s deštníky), cyklisti, lyžaři, dětská hřiště | |
+| chodci (v dešti s deštníky), cyklisti, lyžaři, dětská hřiště, tenisové kurty s čarami, pláže | |
 | klikací budovy s adresou, hledání, názvy částí obce a ulic | |
 | | semafory a železniční přejezdy (`nastroje/semafory.py`, `nastroje/prejezdy.py`) |
 | | skutečná letadla a živé sypače ŘSD (jen na Cloudflare, `"letadla"`, `"pluhy"`) |
