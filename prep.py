@@ -365,6 +365,9 @@ def carkovane(g, c, w, on=3.0, off=3.0):          # přerušovaná čára (zatru
             q = shapely.ops.substring(l, s, min(s + on, l.length))
             if q.length > 0.3: line(q, c, w)
             s += on + off
+# osa řeky nebo potoka přes rybník či jezero (OSM ji tam vede kvůli síti toků) se přes hladinu nekreslí, v zimě by byla čárou přes led
+_STOJATA = shapely.unary_union([p.buffer(-2) for g, c in zip(wat.geom, wat['class']) if c != 'swimming_pool' for p in polys(g) if p.intersects(DRAWBOX)])
+_mimo_vodu = lambda g: g.difference(_STOJATA) if not _STOJATA.is_empty else g
 _bld_stream_excl = shapely.unary_union([p.buffer(1.2) for g in load('building').geom for p in polys(g) if p.intersects(DRAWBOX)]) if POTOKY else shapely.geometry.GeometryCollection()
 for _, r in wat.iterrows():
     g = r.geom
@@ -372,11 +375,11 @@ for _, r in wat.iterrows():
         if r['class'] == 'swimming_pool': fill(g, C['pool'], outline=C['pool_edge'], block=True)
         else: fill(g, C['water'], block=True)
     elif r['class'] in ('river', 'stream') and podzemni(r):          # pod zemí: jen tenká přerušovaná čára
-        if r['class'] == 'river' or POTOKY: carkovane(g, C['stream'], 1.6 if r['class'] == 'stream' else 2.4)
+        if r['class'] == 'river' or POTOKY: carkovane(_mimo_vodu(g), C['stream'], 1.6 if r['class'] == 'stream' else 2.4)
     elif r['class'] == 'river':
-        line(g, C['stream'], 6, block=True)
+        line(_mimo_vodu(g), C['stream'], 6, block=True)
     elif r['class'] == 'stream' and POTOKY:   # potoky (mimo půdorysy budov, kde bývají zatrubněné)
-        g_vis = g.difference(_bld_stream_excl) if not _bld_stream_excl.is_empty else g
+        g_vis = _mimo_vodu(g.difference(_bld_stream_excl) if not _bld_stream_excl.is_empty else g)
         if not g_vis.is_empty:
             line(g_vis, C['stream'], 4.8 if sname(r) else 2.8, block=True)
 
@@ -2129,7 +2132,7 @@ for _, r in wat.iterrows():
         for p in polys(g):
             if p.area > 15: water_out['ponds'].append(zline(p.exterior) + ([] if r['class'] != 'swimming_pool' else []))
     elif (r['class'] == 'river' or (r['class'] == 'stream' and POTOKY)) and not podzemni(r):
-        water_out['streams'] += [zline(l) for l in lines(g)]
+        water_out['streams'] += [zline(l) for l in lines(_mimo_vodu(g))]
 piste_out = []                                 # pro lyžaře v prohlížeči: vždy shora dolů
 for l in PISTE:
     for q in lines(l.intersection(AREA)):
