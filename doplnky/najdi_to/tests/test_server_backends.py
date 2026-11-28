@@ -158,8 +158,9 @@ class TestNajdiToServerBackends(unittest.TestCase):
                 }
                 php_file = PLUGIN_DIR / 'server/php/najdi_to.php'
 
-                def call_php(payload: dict) -> dict:
-                    p = subprocess.run([php_bin, str(php_file)], input=json.dumps(payload), text=True, capture_output=True, env=env, check=False)
+                def call_php(payload: dict, **headers) -> dict:
+                    # PHP CLI bere $_SERVER i z proměnných prostředí, takže HTTP_* tu hrají roli hlaviček žádosti
+                    p = subprocess.run([php_bin, str(php_file)], input=json.dumps(payload), text=True, capture_output=True, env={**env, **headers}, check=False)
                     self.assertEqual(p.returncode, 0, p.stderr)
                     return json.loads(p.stdout)
 
@@ -186,7 +187,9 @@ class TestNajdiToServerBackends(unittest.TestCase):
                 fin_php = call_php({'action': 'finish', 'nickname': 'PhpHledač', 'tickets': done_tickets})
                 self.assertTrue(fin_php['saved'])
 
-                # Opakovaný pokus přes PHP ze stejné CLI identity nesmí zapsat 2. výsledek
+                # Opakovaný pokus přes PHP ze stejné CLI identity nesmí zapsat 2. výsledek,
+                # ani když klient pošle podvržené X-Forwarded-For / CF-Connecting-IP (bez trust_proxy se neberou)
+                fake = {'HTTP_X_FORWARDED_FOR': '203.0.113.7', 'HTTP_CF_CONNECTING_IP': '203.0.113.8'}
                 st_php2 = call_php({'action': 'start', 'levelId': targets['levels'][0]['lvl'], 'difficulty': 'easy', 'season': 'summer'})
                 t_php2 = st_php2['ticket']
                 for idx in st_php2['order']:
@@ -194,10 +197,10 @@ class TestNajdiToServerBackends(unittest.TestCase):
                     q = targets['levels'][0]['questions'][idx]
                     r_php2 = call_php({'action': 'verify', 'x': q['xy'][0], 'y': q['xy'][1], 'ticket': t_php2})
                     t_php2 = r_php2['ticket']
-                dup_php = call_php({'action': 'submit_level', 'nickname': 'PhpDruhyPokus', 'ticket': t_php2})
+                dup_php = call_php({'action': 'submit_level', 'nickname': 'PhpDruhyPokus', 'ticket': t_php2}, **fake)
                 self.assertFalse(dup_php['saved'])
                 self.assertTrue(dup_php['alreadyPlayed'])
-                fin_php2 = call_php({'action': 'finish', 'nickname': 'PhpDruhyPokus', 'tickets': done_tickets})
+                fin_php2 = call_php({'action': 'finish', 'nickname': 'PhpDruhyPokus', 'tickets': done_tickets}, **fake)
                 self.assertFalse(fin_php2['saved'])
                 self.assertTrue(fin_php2['alreadyPlayed'])
 
@@ -207,6 +210,17 @@ class TestNajdiToServerBackends(unittest.TestCase):
                 self.assertEqual(len(lb_php['levels']['1']), 1)
                 self.assertEqual(lb_php['levels']['1'][0]['nickname'], 'PhpHledač')
                 self.assertEqual(lb_php['levels']['2'][0]['nickname'], 'PhpHledač')
+
+    def test_php_client_ip_trust_proxy(self):
+        php_bin = shutil.which('php')
+        if not php_bin:
+            self.skipTest('php není k dispozici')
+        php_file = PLUGIN_DIR / 'server/php/najdi_to.php'
+        env = {**os.environ, 'REMOTE_ADDR': '198.51.100.1', 'HTTP_X_FORWARDED_FOR': '203.0.113.7, 10.0.0.1', 'HTTP_CF_CONNECTING_IP': ''}
+        ip = lambda trust: subprocess.run([php_bin, '-r', f'require {json.dumps(str(php_file))}; echo nt_client_ip({trust});'],
+                                          text=True, capture_output=True, env=env, check=True).stdout
+        self.assertEqual(ip('false'), '198.51.100.1')
+        self.assertEqual(ip('true'), '203.0.113.7')
 
 
 if __name__ == '__main__':

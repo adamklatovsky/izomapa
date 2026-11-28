@@ -144,9 +144,12 @@ function nt_audit_hash(string $clientIp, string $secretKey, ?int $timestampSec =
     return substr(hash_hmac('sha256', $clientIp . '|' . gmdate('o-W', $ts), $secretKey), 0, 12);
 }
 
-function nt_client_ip(): string {
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) return trim((string)$_SERVER['HTTP_CF_CONNECTING_IP']);
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return trim(explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+function nt_client_ip(bool $trustProxy = false): string {
+    // hlavičky posílá klient a může je podvrhnout; věřit jim jde jen za proxy, která je sama přepisuje (trust_proxy)
+    if ($trustProxy) {
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) return trim((string)$_SERVER['HTTP_CF_CONNECTING_IP']);
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return trim(explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+    }
     return trim((string)($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'));
 }
 
@@ -727,7 +730,7 @@ if (PHP_SAPI !== 'cli' || realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE
         ? ['action' => $_GET['action'] ?? 'leaderboard', 'levelId' => $_GET['levelId'] ?? null]
         : (json_decode((string)file_get_contents(PHP_SAPI === 'cli' ? 'php://stdin' : 'php://input'), true) ?: []);
 
-    [$code, $resp] = nt_handle_request($input, $targetsData, $dbPath, $secretKey, nt_client_ip(), null, $profanityRules);
+    [$code, $resp] = nt_handle_request($input, $targetsData, $dbPath, $secretKey, nt_client_ip(($cfg['trust_proxy'] ?? false) === true), null, $profanityRules);
     if (PHP_SAPI !== 'cli') http_response_code($code);
     echo json_encode($resp, JSON_UNESCAPED_UNICODE);
 }
