@@ -13,7 +13,7 @@
   const onChunk = [];
   function loadChunk(k) {
     if (CH[k]) return CH[k].ready;
-    CH[k] = { ready: fetch(`overlay/${k}.json`).then((r) => r.json()).then((d) => {
+    CH[k] = { ready: fetch(`overlay/${k}.json${VER}`).then((r) => r.json()).then((d) => {
       Object.assign(CH[k], d);
       for (const b of d.buildings) b.k = k;
       addBuildings(d.buildings);

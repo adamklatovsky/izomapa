@@ -26,9 +26,11 @@
   for (const s of OV.streets) index.push({ label: s.name, kind: 'ulice', k: s.k, n: norm(s.name), go: () => goTo(s.xy[0], s.xy[1], 0.9) });
   // adresy celé mapy jsou ve zvláštním souboru, načtou se při prvním psaní do hledání
   let addrLoad = null;
-  const loadAddr = () => addrLoad || (addrLoad = fetch('search.json').then((r) => r.json()).then((A) => {
-    for (const [a, k, cx, cy, i, kind] of A) index.push({ label: a, kind: kind || 'adresa', k, n: norm(a), go: () => { goTo(cx, cy, 2); loadChunk(k).then((c) => c && showBuilding(c.buildings[i])); } });
-  }).catch(() => {}));
+  // nestáhlo se: addrLoad = null, další focus nebo psaní zkusí znovu; do indexu se přidá až celý soubor, takže se adresy nezdvojí
+  const loadAddr = () => addrLoad || (addrLoad = fetch('search.json' + VER).then((r) => r.json()).then((A) => {
+    const adresy = A.map(([a, k, cx, cy, i, kind]) => ({ label: a, kind: kind || 'adresa', k, n: norm(a), go: () => { goTo(cx, cy, 2); loadChunk(k).then((c) => c && showBuilding(c.buildings[i])); } }));
+    for (const r of adresy) index.push(r);
+  }).catch(() => { addrLoad = null; }));
   $('q').addEventListener('focus', loadAddr);
   let res = [], cur = -1;
   function renderResults() {
@@ -46,7 +48,7 @@
     const q = norm(e.target.value.trim());
     cur = -1;
     if (q.length < 2) { res = []; renderResults(); return; }
-    if (!addrLoad) { loadAddr().then(() => e.target.dispatchEvent(new Event('input'))); }
+    if (!addrLoad) { loadAddr().then(() => addrLoad && e.target.dispatchEvent(new Event('input'))); }   // po chybě znovu nehledat (jinak dokola)
     const pool = index.filter((r) => shown(r.k)), seenL = new Set();
     const starts = pool.filter((r) => r.n.startsWith(q)), inside = pool.filter((r) => !r.n.startsWith(q) && r.n.includes(q));
     const order = { 'místo': 0, soused: 0.2, 'zastávka': 0.5, budova: 1, ulice: 2, adresa: 3 };
