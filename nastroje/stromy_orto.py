@@ -137,6 +137,11 @@ def _polygony(geo):
             if g.geom_type not in ('Polygon', 'MultiPolygon'): continue
             g = loc(g); ex.append(g)
             if f == 'building': bld.append(g)
+    if os.path.exists('assets/zabaged.json'):                      # orná půda: řádky a pruhy plodin vypadají jako koruny
+        for r in json.load(open('assets/zabaged.json', encoding='utf-8')).get('orna', []):
+            ring = lambda q: [geo.to_local(lo, la) for la, lo in q]
+            g = shapely.Polygon(ring(r[0]), [ring(q) for q in r[1:]]).buffer(0).buffer(-3)   # remízky na okraji zůstanou
+            if not g.is_empty: ex.append(g)
     return ex, bld
 
 
