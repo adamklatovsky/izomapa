@@ -3,8 +3,9 @@
 #  "prvky": [{"ll": [lat, lon], "t": typ prvku}]}   (prvky = zakreslené houpačky, skluzavky, hrazdy …)
 # prep.py na hřiště rozmístí 3D vybavení (zakreslené prvky na své místo, zbytek automaticky podle velikosti hřiště).
 # spouštět z kořene repa: python nastroje/hriste.py
-import json, subprocess, sys, time; sys.path.insert(0, '.')
+import json, sys; sys.path.insert(0, '.')
 import geo
+from nastroje.overpass import overpass
 
 # OSM playground=* / fitness_station=* -> typ modelu v render.html
 PRVKY = {'swing': 'houpacka', 'basketswing': 'houpacka', 'slide': 'skluzavka', 'structure': 'skluzavka', 'climbingframe': 'prolezacka',
@@ -16,17 +17,7 @@ if __name__ == '__main__':
     lo0, la0 = geo.to_lonlat(x0, y0); lo1, la1 = geo.to_lonlat(x1, y1); b = f'{la0},{lo0},{la1},{lo1}'
     q = (f'[out:json][timeout:90];(nwr["leisure"="playground"]({b});nwr["leisure"="fitness_station"]({b});'
          f'node["playground"]({b});node["fitness_station"]({b}););out tags geom;')
-    URL = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter']
-    for pokus in range(6):                      # Overpass bývá přetížený: střídat hlavní a záložní server
-        try:
-            t = subprocess.run(['curl', '-s', '-f', '-m', '150', '-A', 'izomapa-tools/1.0', '--data-urlencode', f'data={q}',
-                                URL[pokus % 2]], check=True, capture_output=True, text=True, encoding='utf-8').stdout
-            el = json.loads(t)['elements']; break
-        except subprocess.CalledProcessError as ex:   # curl -f: HTTP chyba nebo timeout = server přetížený
-            print(URL[pokus % 2], 'nedostupný, curl', ex.returncode, flush=True); time.sleep(20)
-        except (ValueError, KeyError) as ex:           # odpověď přišla, ale není to JSON s elements
-            print(URL[pokus % 2], 'vrátil chybnou odpověď:', str(ex)[:120], t[:200], flush=True); time.sleep(20)
-    else: sys.exit('Overpass nedostupný, zkus to později')
+    el = overpass(q)['elements']
     hriste, prvky = [], []
     for e in el:
         tg = e.get('tags', {})
