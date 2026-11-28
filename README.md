@@ -117,7 +117,7 @@ nestahují).
 | | semafory a železniční přejezdy (`nastroje/semafory.py`, `nastroje/prejezdy.py`) |
 | | skutečná letadla a živé sypače ŘSD (jen na Cloudflare, `"letadla"`, `"pluhy"`) |
 | | vánoční výzdoba: strom, kluziště, stánky, zapnutá podle data (`assets/vanoce.json`, `./vanoce.sh`) |
-| | doplňky: hra Najdeš to?, letiště s provozem malých letadel, lodě, kajaky a koupání na jezeře, lidé na plážích, v zimě bruslaři, lední jachty a snowkiting (`doplnky/`, ilustrační provoz) |
+| | doplňky: hra Najdeš to?, letiště s provozem malých letadel, lodě, kajaky a koupání na jezeře, lidé na plážích, traktory a kombajny na polích, v zimě bruslaři, lední jachty a snowkiting (`doplnky/`, ilustrační provoz) |
 | | hlášení nepřesností od lidí s administrací (volitelný server, `hlaseni/`) |
 
 **Mosty a lávky** jsou skutečné 3D mostovky: nad silnicí nebo tratí mají podjezdnou výšku a nájezdy na ně vedou
