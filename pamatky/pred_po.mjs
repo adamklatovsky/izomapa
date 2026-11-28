@@ -7,7 +7,9 @@ import fs from 'node:fs'; import path from 'node:path';
 import { ROOT, PODKLADY, server, prohlizec, vyrez, stranka } from './_spolecne.mjs';
 
 const IMG = path.join(PODKLADY, 'img'); fs.mkdirSync(IMG, { recursive: true });
-const seznam = JSON.parse(fs.readFileSync(path.join(ROOT, 'pamatky/seznam.json'), 'utf8'));
+// slug ze seznamu bez pamatky/<slug>.json (smazaný ručně) přeskočit, ať jeden nezastaví snímky ostatních ani render_mapa.sh
+const vse = JSON.parse(fs.readFileSync(path.join(ROOT, 'pamatky/seznam.json'), 'utf8'));
+const seznam = vse.filter((s) => { const je = fs.existsSync(path.join(ROOT, `pamatky/${s}.json`)); if (!je) console.log(`${s}: chybí pamatky/${s}.json, přeskočeno`); return je; });
 const want = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const slugs = (want.length ? want : seznam).filter((s) => seznam.includes(s) && fs.existsSync(path.join(ROOT, `pamatky/${s}.js`)));
 const D = Object.fromEntries(seznam.map((s) => [s, JSON.parse(fs.readFileSync(path.join(ROOT, `pamatky/${s}.json`), 'utf8'))]));
@@ -49,7 +51,7 @@ fs.writeFileSync(VF, JSON.stringify(vrsky, null, 1));
 // souhrn pro dashboard
 const DJ = path.join(PODKLADY, 'dashboard.json'), old = fs.existsSync(DJ) ? JSON.parse(fs.readFileSync(DJ, 'utf8')) : {};
 const rd = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
-for (const k of Object.keys(old)) if (!seznam.includes(k)) delete old[k];          // vyřazené ze seznamu
+for (const k of Object.keys(old)) if (!vse.includes(k)) delete old[k];             // vyřazené ze seznamu (bez .json zůstane minulý souhrn)
 for (const s of seznam) {
   const d = D[s], dirS = path.join(PODKLADY, s);
   const zdroje = fs.existsSync(path.join(dirS, 'fotky/zdroje.json')) ? JSON.parse(fs.readFileSync(path.join(dirS, 'fotky/zdroje.json'), 'utf8')) : [];
