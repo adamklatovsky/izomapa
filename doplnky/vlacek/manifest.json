@@ -1,0 +1,8 @@
+{
+  "id": "vlacek",
+  "name": "Výletní vláček",
+  "version": "1.0.0",
+  "description": "Silniční turistický vláček (lokomotiva a vagónky) jezdí po silnicích mezi zastávkami podle jízdního řádu (ilustrační provoz, v létě ve dne, za deště nejezdí).",
+  "hook": "overlay_hook.py",
+  "scripts": ["vlacek.js"]
+}
