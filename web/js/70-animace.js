@@ -443,6 +443,18 @@
     showCard({ title: `Zastávka ${MHD.names[s.n]}`, text: rows.length ? 'Odjezdy podle jízdního řádu, bez zpoždění.' : 'V příští hodině odtud podle jízdního řádu nic nejede.',
       rows, lon: s.x / cam.kx + cam.lon0, lat: s.y / cam.ky + cam.lat0 });
   }
+  // turistické rozcestníky (assets/rozcestniky.json): [lat, lon, název, výška] -> poloha v obrázku; jen v čtvercích mapy
+  const ROZC = ({{ROZCESTNIKY}} || []).map(([lat, lon, n, e]) => {
+    const x = (lon - cam.lon0) * cam.kx, y = (lat - cam.lat0) * cam.ky, g = gz(x, y), [ix, iy] = toImg(x, y, g);
+    return { lat, lon, n, e, ix, iy, d: depth(x, y, g), h: (toImg(x, y, g)[1] - toImg(x, y, g + 2.6)[1]), x, y };
+  }).filter((r) => cam.grounds.some((q) => Math.abs(r.x - q.cx) <= cam.half && Math.abs(r.y - q.cy) <= cam.half));
+  const rozcAt = (ix, iy) => {                              // rozcestník pod kurzorem (do ~16 px na obrazovce)
+    const scr = viewer.viewport.getContainerSize().x / (viewer.viewport.getBounds(true).width * W);
+    if (scr < 0.3) return null;
+    const r_ = Math.max(16 / scr, 20); let best = null, bd = r_;
+    for (const r of ROZC) { const d = Math.hypot(r.ix - ix, (r.iy - r.h * 0.6) - iy); if (d < bd) { bd = d; best = r; } }
+    return best;
+  };
   const stopAt = (ix, iy) => {                              // zastávka pod kliknutím (do ~20 px na obrazovce, nejméně 6 m)
     if (!MHD.stopPts) return null;
     const scr = viewer.viewport.getContainerSize().x / (viewer.viewport.getBounds(true).width * W);

@@ -26,6 +26,8 @@
     const [ix, iy] = vpToImg(e.position);
     const st = stopAt(ix, iy);
     if (st) { showStop(st); return; }
+    const rz = rozcAt(ix, iy);
+    if (rz) { showCard({ title: rz.n, text: 'Turistický rozcestník' + (rz.e ? `, ${rz.e} m n. m.` : '.'), lon: rz.lon, lat: rz.lat, rows: [] }); return; }
     const b = hit(ix, iy);
     if (b) showBuilding(b); else showPoint(ix, iy);
   });
@@ -37,10 +39,11 @@
       PLANES.hover = PLANES.drawn.find((q) => Math.hypot(q[0] - mx, q[1] - my) < 26)?.[2] || null;
       if (PLANES.hover) { $('osd').style.cursor = 'pointer'; return; }
     }
-    if (!$('l-hover').checked || e.pointerType === 'touch') { state.hover = null; $('osd').style.cursor = ''; return; }
+    if (!$('l-hover').checked || e.pointerType === 'touch') { state.hover = state.hoverRozc = null; $('osd').style.cursor = ''; return; }
     const [ix, iy] = vpToImg(new OpenSeadragon.Point(mx, my));
-    state.hover = hit(ix, iy);
-    $('osd').style.cursor = state.hover || stopAt(ix, iy) ? 'pointer' : '';
+    state.hoverRozc = rozcAt(ix, iy);                       // rozcestník má přednost před budovou (je malý)
+    state.hover = state.hoverRozc ? null : hit(ix, iy);
+    $('osd').style.cursor = state.hover || state.hoverRozc || stopAt(ix, iy) ? 'pointer' : '';
   });
 
 
