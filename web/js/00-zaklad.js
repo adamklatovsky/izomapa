@@ -4,7 +4,17 @@
   addEventListener('pointerdown', () => document.documentElement.classList.add('ukazatel'), { capture: true, passive: true });
   addEventListener('keydown', (e) => { if (e.key === 'Tab') document.documentElement.classList.remove('ukazatel'); }, { capture: true });
 
-  const [TILES, OV] = await Promise.all([fetch('tiles.json').then((r) => r.json()), fetch('overlay.json').then((r) => r.json())]);
+  const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); });
+  const [TILES, OV] = await Promise.all([getJson('tiles.json'), getJson('overlay.json')]).catch((e) => {
+    console.error(e);                                      // výpadek sítě nebo serveru: místo věčného „Načítám mapu…“ říct, co dělat
+    const l = document.getElementById('loading'), b = document.createElement('button');
+    b.className = 'px-btn'; b.type = 'button'; b.textContent = 'Zkusit znovu'; b.addEventListener('click', () => location.reload());
+    const t = document.createElement('p'); t.textContent = 'Mapu se nepodařilo načíst. Zkontrolujte připojení k internetu a zkuste to znovu.';
+    t.style.cssText = 'max-width: 32ch; margin: 0; text-align: center';
+    l.replaceChildren(t, b); l.style.cssText = 'pointer-events: auto; align-content: center; gap: 16px; padding: 16px';
+    return [];
+  });
+  if (!TILES) return;
   // real wind for chimney smoke; the map camera looks from the south-west, so east is right and up, north is left and up
   let realWind = null, realWeather = null, applyRealWeather = () => {};
   // model hlásí kód srážek i při 0 mm: padat smí jen to, co opravdu padá

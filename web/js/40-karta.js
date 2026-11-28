@@ -96,7 +96,8 @@
   // mobil: kartu jde stáhnout prstem dolů
   { let y0 = null;
     const card = $('card');
-    card.addEventListener('pointerdown', (e) => { if (isMobile() && (e.target === $('grab') || card.scrollTop === 0)) { y0 = e.clientY; } });
+    // z pole hlášení, odkazů a tlačítek ne: tah prstem v textu by kartu zavřel a smazal rozepsané hlášení
+    card.addEventListener('pointerdown', (e) => { if (isMobile() && !e.target.closest('textarea, input, select, a, button, summary') && (e.target === $('grab') || card.scrollTop === 0)) { y0 = e.clientY; } });
     card.addEventListener('pointermove', (e) => { if (y0 !== null) { const d = Math.max(0, e.clientY - y0); card.style.transform = `translateY(${d}px)`; } });
     const end = (e) => { if (y0 === null) return; const d = e.clientY - y0; y0 = null; if (d > 70) closeCard(); else card.style.transform = ''; };
     card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
