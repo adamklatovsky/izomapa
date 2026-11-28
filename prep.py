@@ -259,7 +259,7 @@ for _, r in lu.iterrows():
     k = SAT['lu'].get(r.id) or LU.get(r['class'])
     if not SAT['lu'].get(r.id) and r['class'] == 'pitch' and _tag(r, 'sport') == 'tennis': k = TENIS_POVRCH.get(_tag(r, 'surface'), 'court_blue')
     elif not SAT['lu'].get(r.id) and r['class'] == 'pitch' and _tag(r, 'surface') == 'sand': k = 'sand'          # plážový volejbal
-    elif not SAT['lu'].get(r.id) and r['class'] == 'beach_resort' and _green_share(r.geom, trava=True) <= 0.5: k = 'sand'   # pláž; travnaté koupaliště zůstane trávou
+    elif not SAT['lu'].get(r.id) and r['class'] == 'beach_resort' and os.path.exists('build/zelen_maska.png') and _green_share(r.geom, trava=True) <= 0.5: k = 'sand'   # pláž; travnaté koupaliště zůstane trávou (bez masky z povrchy.py beze změny)
     block_ = r['class'] in NOTREE_LU
     if k == 'cobble' and _green_share(r.geom) > 0.5: k = 'park'; block_ = False; _PARK_Z.add(r.id)      # náměstí, které je ve skutečnosti park
     if k: fill(r.geom, C[k], block=block_)
