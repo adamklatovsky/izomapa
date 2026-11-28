@@ -12,8 +12,9 @@
       if (!r.ok) return;
       const d = await r.json(), now = performance.now(), seen = new Set();
       // trasa se promítne do obrázku jednou při stažení (toImg + gz), ve snímku se jen posune a zvětší
-      PLOW.trasy = (d.trasy || []).map((t) => ({ a: t.a, z: t.z, w: t.l.map(([lo, la]) => { const [x, y] = llW(lo, la); return toImg(x, y, gz(x, y) + 0.3); }),
-        c: t.z ? 'rgba(130,130,136,0.45)' : `rgba(255,${120 + t.a * 20},20,${[0.85, 0.7, 0.55, 0.4, 0.28][t.a] || 0.25})` }));
+      PLOW.trasy = (d.trasy || []).map((t) => { const w = t.l.map(([lo, la]) => { const [x, y] = llW(lo, la); return toImg(x, y, gz(x, y) + 0.3); });
+        return { a: t.a, z: t.z, w, bb: [Math.min(...w.map((p) => p[0])), Math.min(...w.map((p) => p[1])), Math.max(...w.map((p) => p[0])), Math.max(...w.map((p) => p[1]))],
+        c: t.z ? 'rgba(130,130,136,0.45)' : `rgba(255,${120 + t.a * 20},20,${[0.85, 0.7, 0.55, 0.4, 0.28][t.a] || 0.25})` }; });
       for (const p of d.pts || []) {
         const [x, y] = llW(p.lon, p.lat); seen.add(p.id);
         let q = PLOW.list.get(p.id);
@@ -54,6 +55,7 @@
     // projeté trasy na silnici
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const tr of PLOW.trasy) {
+      if (ox + tr.bb[2] * sx < -20 || oy + tr.bb[3] * sx < -20 || ox + tr.bb[0] * sx > fx.clientWidth + 20 || oy + tr.bb[1] * sx > fx.clientHeight + 20) continue;   // mimo obrazovku
       ctx.strokeStyle = tr.c;
       ctx.lineWidth = Math.max(1.5, sx * (tr.z ? 3 : 5)); ctx.beginPath();
       tr.w.forEach((p, i) => { const X_ = ox + p[0] * sx, Y_ = oy + p[1] * sx; i ? ctx.lineTo(X_, Y_) : ctx.moveTo(X_, Y_); });
@@ -62,10 +64,10 @@
     for (const q of PLOW.list.values()) {
       const dx = q.tx - q.x, dy = q.ty - q.y, d = Math.hypot(dx, dy);
       if (d > 0.05) { const st = Math.min(d, Math.max((q.v || 30) / 3.6, d / 6) * dt); q.x += dx / d * st; q.y += dy / d * st; }
-      if (!q.trail.length || Math.hypot(q.x - q.trail[q.trail.length - 1][0], q.y - q.trail[q.trail.length - 1][1]) > 6) { q.trail.push([q.x, q.y]); if (q.trail.length > 300) q.trail.shift(); }
-      if (q.trail.length > 1 && q.z === 0) {                   // čerstvá stopa vozu (od otevření mapy)
+      if (!q.trail.length || Math.hypot(q.x - q.trail[q.trail.length - 1][0], q.y - q.trail[q.trail.length - 1][1]) > 6) { q.trail.push([q.x, q.y, toImg(q.x, q.y, gz(q.x, q.y) + 0.3)]); if (q.trail.length > 300) q.trail.shift(); }
+      if (q.trail.length > 1 && q.z === 0) {                   // čerstvá stopa vozu (od otevření mapy), body promítnuté jednou při přidání
         ctx.strokeStyle = 'rgba(255,140,20,0.9)'; ctx.lineWidth = Math.max(1.5, sx * 5); ctx.beginPath();
-        q.trail.forEach(([x, y], i) => { const p = toImg(x, y, gz(x, y) + 0.3), X_ = ox + p[0] * sx, Y_ = oy + p[1] * sx; i ? ctx.lineTo(X_, Y_) : ctx.moveTo(X_, Y_); });
+        q.trail.forEach(([, , p], i) => { const X_ = ox + p[0] * sx, Y_ = oy + p[1] * sx; i ? ctx.lineTo(X_, Y_) : ctx.moveTo(X_, Y_); });
         ctx.stroke();
       }
       if (sx > 0.06 && vis(...toImg(q.x, q.y, gz(q.x, q.y)), 60)) drawPlow(q, sx, ox, oy, t);
