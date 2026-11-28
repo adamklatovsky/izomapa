@@ -128,7 +128,10 @@ def sname(r):
 def dem_sampler():
     import glob
     tiles = {}
-    for f in glob.glob(f'{DATA}/dem/*.png') or glob.glob('data/dem/*.png'):
+    # bez vlastního terénu čtverce ne terén středu (data/dem): ten čtverec nepokrývá a kreslil by se špatný terén bez chyby
+    fs = glob.glob(f'{DATA}/dem/*.png')
+    if not fs: raise SystemExit(f'{DATA}/dem/: chybí terén čtverce, spusť fetch_data.py --vse')
+    for f in fs:
         _, x, y = os.path.basename(f)[:-4].split('_')
         a = np.asarray(Image.open(f).convert('RGB')).astype(np.float64)
         tiles[(int(x), int(y))] = a[..., 0] * 256 + a[..., 1] + a[..., 2] / 256 - 32768
