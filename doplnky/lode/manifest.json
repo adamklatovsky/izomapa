@@ -1,0 +1,10 @@
+{
+  "id": "lode",
+  "name": "Lodě a koupání",
+  "version": "1.0.0",
+  "description": "Na jezeře jezdí parníky po lodní lince, šlapadla u půjčoven a plachetnice, v létě se u pláží koupou lidé; v zimě na zamrzlém jezeře bruslaři, lední jachty a snowkiteři (ilustrační provoz, jen ve dne a za pěkného počasí; na led se smí jen v mrazivé zimě).",
+  "hook": "overlay_hook.py",
+  "scripts": [
+    "lode.js"
+  ]
+}
