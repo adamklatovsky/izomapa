@@ -11,7 +11,7 @@ Prohlížeč z toho podle skutečného času dopočítá, kde je každé vozidlo
 """
 import csv, io, json, os, subprocess, sys, time, zipfile
 import shapely
-from nastroje.gtfs_casy import cekani_na_konecne, dopln_mezicasy
+from nastroje.gtfs_casy import cekani_na_konecne, dopln_mezicasy, pravidelna_linka
 from geo import CHUNKS, HALF, MESTO, chunk_center, to_local
 
 URL = (MESTO.get('mhd') or {}).get('gtfs')
@@ -109,7 +109,7 @@ if MESTO.get('vlak') and os.path.exists('build/vlaky/vlaky_mhd.json'):
         z_ = t[6]; out.append([t[0] + _r, t[1] + _s, t[2], t[3], t[4], nid(t[5]), [q for i in range(0, len(z_), 2) for q in (nid(z_[i]), z_[i + 1])]])
     print('vlaků z celostátního jízdního řádu', len(_v['trips']))
 for t in trips:
-    if routes[RI[t['route_id']]][1] != 2 and len(routes[RI[t['route_id']]][0]) > 4: continue   # poptávková doprava apod. bez pravidelné trasy; vlaky mají dlouhá čísla
+    if not pravidelna_linka(*routes[RI[t['route_id']]][:2]): continue   # poptávková doprava apod. bez pravidelné trasy
     s = st.get(t['trip_id'], [])
     if len(s) < 2 or t['shape_id'] not in SI: continue
     L, gl = SLEN[t['shape_id']]; k = L / gl                     # vzdálenost z jízdního řádu -> délka trasy v mapě

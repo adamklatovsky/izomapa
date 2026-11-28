@@ -1,6 +1,6 @@
 import sys, unittest
 sys.path.insert(0, '.')
-from nastroje.gtfs_casy import dopln_mezicasy
+from nastroje.gtfs_casy import dopln_mezicasy, pravidelna_linka
 
 class MezicasyTest(unittest.TestCase):
     def test_doplni_cas_a_zachova_mezizastavku(self):
@@ -14,5 +14,20 @@ class MezicasyTest(unittest.TestCase):
     def test_bez_extrapolace(self):
         data = [(1,None,None,0,'A'), (2,60,60,0,'B'), (3,None,None,0,'C')]
         self.assertEqual([x[4] for x in dopln_mezicasy(data)], ['B'])
+
+class PravidelnaLinkaTest(unittest.TestCase):
+    def test_mestske_cislo(self):
+        self.assertTrue(pravidelna_linka('25', 3))
+
+    def test_licencni_cislo_cis_jr(self):
+        # celostátní GTFS z CIS JŘ: všechny autobusové linky mají šestimístné licenční číslo
+        self.assertTrue(pravidelna_linka('500250', 3))
+
+    def test_dlouhe_cislo_poptavkove_dopravy(self):
+        self.assertFalse(pravidelna_linka('AE-Night', 3))
+        self.assertFalse(pravidelna_linka('12345', 3))
+
+    def test_vlak_s_dlouhym_cislem(self):
+        self.assertTrue(pravidelna_linka('R 1209', 2))
 
 if __name__ == '__main__': unittest.main()
