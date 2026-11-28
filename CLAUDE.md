@@ -15,7 +15,9 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    **Založení:** `.venv/bin/python novy_mesto.py "Název"` (víceslovné nebo nejednoznačné názvy: `--dotaz "Název, okres X"`).
    Vypíše počet čtverců 2,3 × 2,3 km. Řekni uživateli, kolik to je a jak dlouho to potrvá (orientačně: stažení
    10–30 min, render 5–10 min na čtverec na Macu s Apple Silicon). U velkého města nabídni nejdřív centrum:
-   `--max 4` (jen 4 čtverce kolem středu).
+   `--max 4` (jen 4 čtverce kolem středu). Rozšíření na celé město: znovu `novy_mesto.py … --prepsat` (texty v `mesto.json`
+   se přepíšou, záloha je `mesto.json.bak`) a `./postav.sh`; `data_all/` se stáhne znovu samo, odvozená data, která vypíše
+   `novy_mesto.py`, je potřeba smazat ručně.
    **Rozlišení:** vždy se zeptej, než začne stavba, a vysvětli to lidsky (podklad je sekce „Základní, nebo detailní
    rozlišení“ v README, obrázek `priklady/rozliseni_kostel.webp` mu můžeš ukázat). Třeba: „Chceš mapu v základním,
    nebo detailním rozlišení? Detailní (0,1 m na pixel) je při největším přiblížení ostřejší, je na něm vidět víc

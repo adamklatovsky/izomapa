@@ -161,5 +161,10 @@ import os, shutil
 if os.path.exists('mesto.json'):
     if '--prepsat' not in sys.argv: sys.exit('mesto.json už existuje (ruční texty a MHD by se ztratily). Pro přepsání přidej --prepsat; starý soubor se uloží jako mesto.json.bak.')
     shutil.copy('mesto.json', 'mesto.json.bak')
+    print('Data předchozí mapy: data_all/ stáhne fetch_data.py --vse znovu sám, když nepokrývá novou mapu. Kroky, které postav.sh '
+          'přeskakuje podle hotového souboru, se ale pro nové čtverce nespustí: smaž assets/dmp_vysky.json, build/les_maska.png, '
+          'assets/zabaged.json, assets/hriste.json a výstupy dalších nástrojů v assets/ (strechy_orto.json, hrebeny.json, ruian_budovy.json…). '
+          'Jiné město: smaž i data/ a data_*/ (jinak se do terénu a laserových výšek přimíchá předchozí město); '
+          'ruční úpravy v assets/ a mista.json patří k předchozímu městu.')
 open('mesto.json', 'w', encoding='utf-8').write(txt + '\n')
 print('zapsáno mesto.json – zkontroluj texty (rod, název) a případně doplň MHD')
