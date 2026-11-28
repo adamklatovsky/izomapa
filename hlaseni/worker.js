@@ -6,6 +6,14 @@ import { onRequest as flights } from '../functions/api/flights.js';
 import { onRequest as pluhy } from '../functions/api/pluhy.js';
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 
+// IPv6 jako celá /64 (jedna domácnost / jeden telefon), jinak by střídání adres v ní obešlo limit; IPv4 i ::ffff:1.2.3.4 celé
+function ipKey(ip) {
+  if (!ip.includes(':') || ip.includes('.')) return ip;
+  const [a, b] = ip.split('::'), h = a ? a.split(':') : [], t = b ? b.split(':') : [];
+  const g = b === undefined ? h : [...h, ...Array(8 - h.length - t.length).fill('0'), ...t];
+  return g.slice(0, 4).map((x) => (parseInt(x, 16) || 0).toString(16)).join(':') + '::/64';
+}
+
 async function sha(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, '0')).join('');
@@ -33,19 +41,22 @@ async function report(req, env) {
     const r = await (await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: f })).json();
     if (!r.success) return json({ ok: false, err: 'captcha' }, 403);
   }
-  const day = new Date().toISOString().slice(0, 10), ip = req.headers.get('cf-connecting-ip') || 'local';
+  const day = new Date().toISOString().slice(0, 10), ip = ipKey(req.headers.get('cf-connecting-ip') || 'local');
   const who = await sha(ip + '|' + day + '|' + (env.SALT || 'izo'));
   const dev = await sha(ip + '|dev|' + (env.SALT || 'izo'));
-  // limit: 3 hlášení za hodinu z jednoho zařízení (IP)
-  const recent = await env.DB.prepare("SELECT COUNT(*) n FROM reports WHERE dev = ? AND created > datetime('now', '-1 hour')").bind(dev).first();
-  if (recent && recent.n >= 3) return json({ ok: false, err: 'limit', msg: 'Z tohoto zařízení přišla za poslední hodinu už 3 hlášení. Zkuste to prosím později.' }, 429);
+  // limit: 3 hlášení za hodinu z jednoho zařízení (IP); kontrola i zápis v jednom příkazu, ať souběžné žádosti limit nepřeskočí
+  let ins;
   try {
-    await env.DB.prepare('INSERT INTO reports (target, title, kind, note, lon, lat, who, dev) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(target, String(d.title || '').slice(0, 120), kind, note, +d.lon || null, +d.lat || null, who, dev).run();
+    ins = await env.DB.prepare(`INSERT INTO reports (target, title, kind, note, lon, lat, who, dev)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reports WHERE dev = ? AND created > datetime('now', '-1 hour')) < 3`)
+      .bind(target, String(d.title || '').slice(0, 120), kind, note, +d.lon || null, +d.lat || null, who, dev, dev).run();
   } catch (e) {
     if (String(e).includes('UNIQUE')) return json({ ok: false, err: 'dup', msg: 'Tohle místo jste dnes už nahlásili, děkuji.' }, 409);
     throw e;
   }
+  if (!ins.meta.changes) return json({ ok: false, err: 'limit', msg: 'Z tohoto zařízení přišla za poslední hodinu už 3 hlášení. Zkuste to prosím později.' }, 429);
+  // otisk zařízení je potřeba jen hodinu kvůli limitu, déle by propojoval hlášení jednoho člověka napříč dny
+  await env.DB.prepare("UPDATE reports SET dev = NULL WHERE dev IS NOT NULL AND created <= datetime('now', '-1 hour')").run();
   return json({ ok: true });
 }
 
@@ -64,8 +75,11 @@ async function adminDetail(req, env) {
 }
 
 async function adminSet(req, env) {
-  const d = await req.json();
-  if (!['nove', 'vyreseno', 'zamitnuto'].includes(d.status)) return json({ ok: false }, 400);
+  // CSRF: prohlížeč k cizímu formuláři přibalí uložené heslo (Basic), Origin ale prozradí cizí stránku
+  const o = req.headers.get('origin');
+  if (o && o !== new URL(req.url).origin) return json({ ok: false, err: 'origin' }, 403);
+  let d; try { d = await req.json(); } catch { return json({ ok: false, err: 'bad json' }, 400); }
+  if (!['nove', 'vyreseno', 'zamitnuto'].includes(d?.status)) return json({ ok: false }, 400);
   await env.DB.prepare('UPDATE reports SET status = ? WHERE target = ?').bind(d.status, String(d.target || '')).run();
   return json({ ok: true });
 }

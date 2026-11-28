@@ -254,7 +254,8 @@ přepíše pro jiný hosting.
 3. `npx wrangler d1 migrations apply izomapa-hlaseni --remote`
 4. `npx wrangler secret put ADMIN_PASSWORD` (heslo do administrace) a `npx wrangler deploy`.
 
-Ukládá se jen text hlášení, místo na mapě a otisk (hash) IP adresy kvůli limitu 3 hlášení za hodinu, ne IP samotná.
+Ukládá se jen text hlášení, místo na mapě a otisk (hash) IP adresy kvůli limitu 3 hlášení za hodinu, ne IP samotná
+(IPv6 po celých /64; otisk pro limit starší než hodina se smaže při dalším přijatém hlášení, zůstává jen denní otisk proti dvojímu nahlášení).
 Bez `"hlaseni": true` se tlačítko nezobrazí a web zůstane čistě statický.
 
 **Před ostrým provozem nastavte ještě `SALT`:** `npx wrangler secret put SALT` (libovolný dlouhý náhodný řetězec).
