@@ -14,7 +14,8 @@ from shapely.geometry import Point
 sys.path.insert(0, os.path.join(ROOT, 'pamatky'))
 import viditelnost as VID
 
-UA = {'User-Agent': 'izomapa-pamatky/0.1 (kandidati; open data)'}
+# za uživatele, ne za autora šablony (CLAUDE.md, Pravidla); Wikimedia chce v User-Agent kontakt, tím je web mapy
+UA = {'User-Agent': 'izomapa-pamatky/1.0' + (f" ({geo.MESTO['url']})" if geo.MESTO.get('url') else '')}
 CACHE = 'podklady-soukrome/pamatky/wikidata_pamatky.json'
 a = sys.argv[1:]
 MINA = float(a[a.index('--min-plocha') + 1]) if '--min-plocha' in a else 150.0

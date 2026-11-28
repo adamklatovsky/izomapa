@@ -3,7 +3,7 @@
 # Chybějící listy DMP 1G kolem památek si stáhne sám (jako dmp_fetch.py, jen ty potřebné) do build/dmp/.
 # -> podklady-soukrome/pamatky/<slug>/laser.json: výšky nad terénem (medián, p90, p98, max) pro budovy památky a sousedy,
 #    nejvyšší body (vrcholy věží/hřebenů) po buňkách 3 m s polohou vůči středu rámu (v = na východ, s = na sever, m)
-import glob, io, json, math, os, re, sys, urllib.request, zipfile
+import glob, io, json, math, os, re, shutil, sys, urllib.request, zipfile
 import numpy as np, laspy, shapely
 from pyproj import Transformer
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,8 +20,11 @@ def listy(lon0, lat0, lon1, lat1):
     os.makedirs('build/dmp', exist_ok=True); A = 'build/dmp/atom.xml'
     if not os.path.exists(A):
         print('stahuji seznam listů DMP 1G (~24 MB)…', flush=True)
-        open(A, 'wb').write(urllib.request.urlopen(urllib.request.Request('https://atom.cuzk.gov.cz/DMP1G-SJTSK/DMP1G-SJTSK.xml', headers=UA), timeout=300).read())
+        # přes .part (jako dmp_fetch.py): useknutý seznam by se příště bral jako hotový
+        with open(A + '.part', 'wb') as f: f.write(urllib.request.urlopen(urllib.request.Request('https://atom.cuzk.gov.cz/DMP1G-SJTSK/DMP1G-SJTSK.xml', headers=UA), timeout=300).read())
+        os.replace(A + '.part', A)
     s = open(A, encoding='utf8').read()
+    if '</feed>' not in s[-100:]: os.remove(A); sys.exit(f'{A} byl useknutý (smazán), spusť podklady_laser.py znovu')
     for e in s.split('<entry>')[1:]:
         p = re.search(r'<georss:polygon>(.*?)<', e); k = re.search(r'DMP1G-SJTSK_([A-Z0-9]+)\.xml', e)
         if not (p and k): continue
@@ -31,7 +34,10 @@ def listy(lon0, lat0, lon1, lat1):
         if os.path.exists(f'build/dmp/{n}.laz'): continue
         print('stahuji list', n, flush=True)
         z = urllib.request.urlopen(urllib.request.Request(f'https://openzu.cuzk.cz/opendata/DMP1G/epsg-5514/{n}.zip', headers=UA), timeout=300).read()
-        zipfile.ZipFile(io.BytesIO(z)).extractall('build/dmp')
+        # rozbalit vedle a .laz přesunout až celý: přerušené rozbalení by jinak nechalo useknutý list, který se příště přeskočí
+        shutil.rmtree('build/dmp/rozbaleno', ignore_errors=True)   # zbytek dřívějšího přerušeného rozbalení
+        zipfile.ZipFile(io.BytesIO(z)).extractall('build/dmp/rozbaleno')
+        for f in glob.glob('build/dmp/rozbaleno/*'): os.replace(f, 'build/dmp/' + os.path.basename(f))
 
 def w2k(pts):
     a = np.asarray(pts, float); x, y = T.transform(LON0 + a[:, 0] / KX, LAT0 + a[:, 1] / KY)
