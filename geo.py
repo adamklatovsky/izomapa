@@ -3,7 +3,17 @@ import json, math, os
 import numpy as np
 
 # Město: mesto.json (vyrobí ho novy_mesto.py), jiný soubor přes proměnnou IZO_MESTO
-MESTO = json.load(open(os.environ.get('IZO_MESTO', 'mesto.json'), encoding='utf-8'))
+_SOUBOR = os.environ.get('IZO_MESTO', 'mesto.json')
+MESTO = json.load(open(_SOUBOR, encoding='utf-8'))
+# chybějící klíč by jinak skončil holým KeyError, chybějící čtverec (0, 0) až po hodinách renderu v dzi.py
+_chybi = [k for k in ('stred', 'href', 'dno', 'ctverce') if MESTO.get(k) is None]
+if _chybi:
+    raise SystemExit(f'{_SOUBOR}: chybí {", ".join(_chybi)} (vyrábí je novy_mesto.py; doplň je ručně, vzor je v priklady/mesto.json)')
+_C = [tuple(c) if isinstance(c, list) else c for c in MESTO['ctverce']]
+if (0, 0) not in _C:
+    raise SystemExit(f'{_SOUBOR}: v "ctverce" chybí střed [0, 0] (čtverce se zapisují jako [i, j] od středu města)')
+if len(set(_C)) != len(_C):
+    raise SystemExit(f'{_SOUBOR}: v "ctverce" je čtverec dvakrát: {sorted({c for c in _C if _C.count(c) > 1})}')
 # vánoční výzdoba na jednom místě (assets/vanoce.json): {"od": "11-11", "do": "01-06", "stromy": [[lat, lon]], "kluziste": [...], "stanky": [...]}
 # přepíše staré klíče vanocni_strom / kluziste / vanocni_stanky z mesto.json
 if os.path.exists('assets/vanoce.json'):

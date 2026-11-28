@@ -6,6 +6,11 @@ from PIL import Image
 import geo
 from geo import MESTO
 
+# texty stránky (vyrábí je novy_mesto.py); bez nich by build skončil holým KeyError
+_chybi = [k for k in ('nazev', 'titulek', 'popis', 'podtitul') if k not in MESTO] + ([] if isinstance(MESTO.get('h1'), list) and len(MESTO['h1']) >= 2 else ['h1'])
+if _chybi:
+    raise SystemExit(f'{geo._SOUBOR}: chybí texty {", ".join(_chybi)} (vzor v priklady/mesto.json, "h1" jsou dva řádky nadpisu: ["Izometrická", "Chrastava"])')
+
 
 def og_obrazek(out='site/og.jpg', W=1200, H=630, dolu=None, latlon=None):
     """náhled pro sdílení (og:image) 1200×630: výřez středu města z letních dlaždic v 0,4 m/px (u základního rozlišení
@@ -96,12 +101,16 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'RUIAN_ZDROJ': ', typy budov z RÚIAN' if os.path.exists('assets/ruian_budovy.json') else '',
         'VITR_ZDROJ': ', ' + ('počasí a vítr' if M.get('pocasi') and M.get('vitr') else 'počasí' if M.get('pocasi') else 'vítr') + ' © <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)' if M.get('vitr') or M.get('pocasi') else '',
         # další zdroje dat města (mesto.json "dalsi_zdroje": [{"text": "…", "url": "…"}]), např. pasporty a technická mapa města
-        'DALSI_ZDROJE': ''.join(f', <a href="{E(z["url"])}" target="_blank" rel="noopener">{E(z["text"])}</a>' if z.get('url') else f', {E(z["text"])}'
-                                for z in ({'text': z} if isinstance(z, str) else z for z in (M.get('dalsi_zdroje') or []))),
+        # odkaz jen http(s) (javascript: apod. zůstane holým textem), bez "text" se ukáže adresa
+        'DALSI_ZDROJE': ''.join(f', <a href="{E(z["url"])}" target="_blank" rel="noopener">{E(z.get("text") or z["url"])}</a>'
+                                if re.match(r'https?://', z.get('url') or '', re.I) else f', {E(z.get("text") or z.get("url"))}'
+                                for z in ({'text': z} if isinstance(z, str) else z or {} for z in (M.get('dalsi_zdroje') or []))
+                                if z.get('text') or z.get('url')),
         'PLUHY_ZDROJ': ', sypače zimní údržby © <a href="https://udrzba.rsd.cz/" target="_blank" rel="noopener">ŘSD ČR</a>' if M.get('pluhy', False) else '',
         'LETADLA_ZDROJ': ', letadla © <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> (ODbL)' if M.get('letadla', False) else '',
-        'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
-                     if mhd.get('gtfs') and mhd.get('zdroj') else '',
+        'MHD_ZDROJ': ('' if not (mhd.get('gtfs') and mhd.get('zdroj')) else
+                      f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
+                      if re.match(r'https?://', mhd.get('zdroj_url') or '', re.I) else f', jízdní řády MHD © {E(mhd["zdroj"])}'),
     }
     app = re.sub(r'\{\{(\w+)\}\}', lambda m: fill[m.group(1)], SABLONA)
     og = f'''<meta property="og:image" content="{E(obrazek_url)}">
