@@ -2102,10 +2102,10 @@ for _round in range(3):
     print('napojení doprostřed kusu rozděleno', sum(len(v) for v in _cuts.values()))
     graph = _new
 print('jednosměrných úseků pro auta', sum(1 for g_ in graph if g_.get('o')), 'kruhových objezdů', len(_ring_lines))
-# železniční přejezdy (nastroje/prejezdy.py, OSM railway=level_crossing): kus silnice v úrovni terénu si nese [metry od začátku, x, y]
+# železniční přejezdy (nastroje/prejezdy.py, OSM railway=level_crossing): kus silnice v úrovni terénu si nese [metry od začátku, x, y(, 1 = závory)]
 if os.path.exists('assets/prejezdy.json'):
     sys.path.insert(0, 'nastroje'); import prejezdy as _pj
-    _pj_pts = [tuple(float(v) for v in to_local(lo, la)) for la, lo in json.load(open('assets/prejezdy.json', encoding='utf-8'))]
+    _pj_pts = [(*(float(v) for v in to_local(lo, la)), *zav) for la, lo, *zav in json.load(open('assets/prejezdy.json', encoding='utf-8'))]   # zav: [1] = závory
     _rails = shapely.STRtree([l for _, g_, c_, _w, _n in roads if c_ == 'rail' for l in lines(g_)] or [Point(1e9, 1e9)])
     for g_ in graph:
         if g_.get('c') == 'service' or g_.get('_deck'): continue      # mostovka nad tratí přejezd nemá

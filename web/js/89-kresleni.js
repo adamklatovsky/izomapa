@@ -67,7 +67,8 @@
         for (const d of [-6, 6]) {                         // výstražník z obou stran kolejí (když kus silnice pokračuje)
           const sp = d < 0 ? z.s0 + d : z.s1 + d;
           if (sp < 0 || sp > r.L) continue;
-          const o = curbPt(along(r, sp), d < 0 ? 1 : -1, 4), dp = o.d;   // vpravo u okraje vozovky pro auta, která k přejezdu jedou
+          const osa = along(r, sp), o = curbPt(osa, d < 0 ? 1 : -1, 4), dp = o.d;   // vpravo u okraje vozovky pro auta, která k přejezdu jedou
+          o.cx = osa.ix; o.cy = osa.iy;                    // střed vozovky: kam sahá sklopená závora
           if (!vis(o.ix, o.iy) || occluded(o.ix, o.iy, dp) || occluded(o.ix, o.iy - 30, dp)) continue;   // za budovou (pata nebo výstražník) se nekreslí
           if (dp < dc) xFront.push([o, z]); else drawXPost(o, z, sx, ox, oy, now, night);
         }
