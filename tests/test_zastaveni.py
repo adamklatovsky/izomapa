@@ -25,6 +25,6 @@ for r in roads:
     for z in r.get('j', []):
         n += 1
         assert -0.5 <= z[0] <= L + 0.5, f'stop at {z[0]} m on a {L:.1f} m piece'
-    for s, x, y in r.get('j', []):
+    for s, x, y, *_ in r.get('j', []):
         assert math.dist(at(r['w'], s), (x, y)) < 1.5, 'crossing position does not match its distance along the piece'
 print('stops checked', n)

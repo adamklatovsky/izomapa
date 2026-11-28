@@ -10,4 +10,6 @@ assert p.na_kusu(kus, [(40, 20)]) == [], 'přejezd na jiné silnici dál než 6 
 assert p.na_kusu(kus, [(40, 1), (41, -1)]) == [[40.0, 40.0, 0.0]], 'dva uzly jednoho přejezdu jsou jeden'
 assert p.na_kusu(kus, [(200, 0), (10, 0)]) == [[10.0, 10.0, 0.0]]
 assert p.na_kusu([[0, 0]], [(0, 0)]) == []
+assert p.na_kusu(kus, [(40, 2, 1)]) == [[40.0, 40.0, 0.0, 1]], 'příznak závor (třetí prvek bodu) se nese dál'
+assert p.na_kusu(kus, [(40, 1), (41, -1, 1)]) == [[40.0, 40.0, 0.0, 1]], 'závory má přejezd, když je má kterýkoli jeho uzel'
 print('ok')

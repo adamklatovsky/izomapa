@@ -38,8 +38,8 @@
     if (!XC.has(key)) XC.set(key, { x: z[1], y: z[2], closed: false, on: null });
     z.xc = XC.get(key);
     let g = XG.find((q) => q.pts.some(([x, y]) => Math.hypot(x - z[1], y - z[2]) < XG_M));
-    if (!g) XG.push(g = { pts: [], cs: new Set(), closed: false });
-    g.pts.push([z[1], z[2]]); g.cs.add(z.xc); z.g = g;
+    if (!g) XG.push(g = { pts: [], cs: new Set(), closed: false, was: false });
+    g.pts.push([z[1], z[2]]); g.cs.add(z.xc); z.g = g; if (z[3]) g.bar = 1;    // z[3] = 1: přejezd má závory (OSM crossing:barrier)
     const lead = xings.find(([r2, z2]) => r2 === r && z2.g === g);       // na jednom kusu silnice jedny výstražníky pro celou skupinu
     if (lead) { lead[1].s0 = Math.min(lead[1].s0, z[0]); lead[1].s1 = Math.max(lead[1].s1, z[0]); }
     else { z.s0 = z.s1 = z[0]; xings.push([r, z]); }
@@ -248,6 +248,18 @@
     ctx.moveTo(x - q * 1.8, y - h - q * 3.6); ctx.lineTo(x + q * 1.8, y - h - q * 1.2); ctx.moveTo(x + q * 1.8, y - h - q * 3.6); ctx.lineTo(x - q * 1.8, y - h - q * 1.2); ctx.stroke();
     ctx.strokeStyle = '#f4f4f0'; ctx.lineWidth = q * 0.45; ctx.stroke();
     ctx.fillStyle = '#26262a'; ctx.fillRect(x - q * 2, y - h - q * 0.2, q * 4, q * 1.6);
+    if (z.g.bar && o.cx !== undefined) {                 // závora: rameno od sloupku přes vozovku ke středu, sklápí se ~6 s po zavření / otevření
+      const g = z.g; if (g.was !== g.closed) { g.was = g.closed; g.t0 = now; }
+      const k = Math.min(1, (now - (g.t0 ?? -1e9)) / 6000), dn = g.closed ? k : 1 - k;
+      const vx = (o.cx - o.ix) * sx, vy = (o.cy - o.iy) * sx, len = Math.hypot(vx, vy) || 1;
+      const px = x + vx / len * q * 1.3, py = y - 5 * sx + vy / len * q * 1.3;   // otočný bod kousek od sloupku směrem k vozovce, ať zvednutá závora nesplyne se sloupkem
+      const a0 = -Math.PI / 2, da = (Math.atan2(vy, vx) - a0 + 3 * Math.PI) % (2 * Math.PI) - Math.PI, a = a0 + da * dn;   // kratší oblouk: rameno se sklápí k vozovce, ne přes druhou stranu
+      const ex = px + Math.cos(a) * len, ey = py + Math.sin(a) * len;
+      ctx.lineCap = 'butt'; ctx.lineWidth = q * 0.55; ctx.strokeStyle = '#f4f4f0'; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.strokeStyle = '#d23a2e'; ctx.setLineDash([len / 7, len / 7]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#26262a'; ctx.fillRect(px - q * 0.7, py - q * 0.7, q * 1.4, q * 1.4);
+    }
     const lamp = z.g.closed ? [x + (ph ? 1.05 : -1.05) * q, '#ff4438', '255,68,56'] : Math.floor(now / 900) % 2 ? [x, '#f4f4f0', '244,244,240'] : null;
     if (!lamp) return;
     if (night > 0.3) {
